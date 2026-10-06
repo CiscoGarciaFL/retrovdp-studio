@@ -197,6 +197,24 @@ void EditorProjectController::setActiveSpritePaletteBank(int value)
     emit projectChanged();
 }
 
+bool EditorProjectController::activeSpritePriority() const
+{
+    return !spriteSets_.empty()
+        && spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+               .placements[static_cast<std::size_t>(activeSprite_)].priority;
+}
+
+void EditorProjectController::setActiveSpritePriority(bool value)
+{
+    if (!usesGenesisMode5Editor() || spriteSets_.empty()) return;
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.priority == value) return;
+    placement.priority = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
 void EditorProjectController::setActiveSpriteColorDepth(int value)
 {
     if (editScope_ != 1 || spriteSets_.empty()) return;

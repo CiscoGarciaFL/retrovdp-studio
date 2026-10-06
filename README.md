@@ -36,10 +36,14 @@ interpretations: 448 8×8 4bpp background tiles, 64 sprite entries, global
 Genesis profile compiles H32 256-pixel and H40 320-pixel Mode V screens at
 224 or PAL 240 lines into packed 4bpp tiles, a Plane A map, four 16-entry
 RGB333 CRAM banks, and display-register state. Its Character workspace exposes
-2,048 indexed tiles and palette-bank selection; its Sprite workspace exposes
-80 entries, four palette banks, and every rectangular 8-to-32-pixel hardware
-size. Native structured-editor map/SAT export remains part of the shared
-export work. The input
+2,048 indexed tiles plus independent Plane A, Plane B, and Window maps with
+palette, flip, and priority attributes. A composite preview applies native VDP
+priority order across those maps and the active sprite set, and Screen Image
+regions can be extracted straight into the selected layer. Character export
+writes packed `.TILES`, three big-endian map files, `.PAL`, and `.REG` assets;
+its Sprite workspace exposes 80 entries, four palette banks, and every
+rectangular 8-to-32-pixel hardware size. Native linked-SAT export remains part
+of the shared export work. The input
 pipeline loads common Qt raster formats, PCX, and supported retro formats with
 explicit safety limits. The export layer provides deterministic RAW, RLE,
 TIFILES, V9T9, MSX, Coleco, Adam, Extended BASIC, ROM, and PNG exporters with

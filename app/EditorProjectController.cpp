@@ -19,7 +19,9 @@
 #include <QSaveFile>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
+#include <iterator>
 #include <utility>
 
 namespace {
@@ -225,7 +227,7 @@ QVariantMap EditorProjectController::activeTargetInfo() const
          usesSmsMode4Editor()
              ? QStringLiteral("Mode 4 sprites; 8x8 or 8x16, 4bpp sprite palette")
              : usesGenesisMode5Editor()
-                 ? QStringLiteral("Mode V sprites; 8x8 through 32x32, 4bpp palette")
+                 ? QStringLiteral("Mode V sprites; independent 8/16/24/32 width and height, 4bpp palette")
              : QStringLiteral("Target-compatible sprites")},
         {QStringLiteral("spriteMaximumPerScanline"),
          usesSmsMode4Editor() ? 8 : (usesGenesisMode5Editor()
@@ -422,6 +424,101 @@ void EditorProjectController::setCharacterPaletteBank(int value)
     emit projectChanged();
 }
 
+int EditorProjectController::activeCharacterTilePalette() const
+{
+    if (characterEditorSlots_.empty()) return 0;
+    return characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)].palette;
+}
+
+bool EditorProjectController::activeCharacterTileFlipX() const
+{
+    return !characterEditorSlots_.empty()
+        && characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)].flipX;
+}
+
+bool EditorProjectController::activeCharacterTileFlipY() const
+{
+    return !characterEditorSlots_.empty()
+        && characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)].flipY;
+}
+
+bool EditorProjectController::activeCharacterTilePriority() const
+{
+    return !characterEditorSlots_.empty()
+        && characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)].priority;
+}
+
+void EditorProjectController::setActiveCharacterPlane(int value)
+{
+    if (!usesGenesisMode5Editor()) value = 0;
+    value = std::clamp(value, 0, 2);
+    if (activeCharacterPlane_ == value) return;
+    if (characterPanActive_) finishCharacterPan();
+    activeCharacterPlane_ = value;
+    const auto match = std::find_if(
+        characterEditorSlots_.begin(), characterEditorSlots_.end(),
+        [value](const CharacterEditorSlot& slot) { return slot.plane == value; });
+    if (match != characterEditorSlots_.end()) {
+        activeCharacterEditor_ = static_cast<int>(
+            std::distance(characterEditorSlots_.begin(), match));
+        if (match->loaded) {
+            activeCharacterSet_ = match->setIndex;
+            activeCharacterPattern_ = match->patternIndex;
+        }
+    } else {
+        characterEditorSlots_.push_back(
+            {false, activeCharacterSet_, activeCharacterPattern_, 0, 0, value});
+        activeCharacterEditor_ = static_cast<int>(characterEditorSlots_.size()) - 1;
+    }
+    emit projectChanged();
+}
+
+void EditorProjectController::setGenesisCompositePreview(bool value)
+{
+    if (genesisCompositePreview_ == value) return;
+    genesisCompositePreview_ = value;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveCharacterTilePalette(int value)
+{
+    if (!usesGenesisMode5Editor() || characterEditorSlots_.empty()) return;
+    value = std::clamp(value, 0, 3);
+    auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
+    if (slot.palette == value && characterPaletteBank_ == value) return;
+    slot.palette = value;
+    characterPaletteBank_ = value;
+    ++characterRevision_;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveCharacterTileFlipX(bool value)
+{
+    if (!usesGenesisMode5Editor() || characterEditorSlots_.empty()) return;
+    auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
+    if (slot.flipX == value) return;
+    slot.flipX = value;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveCharacterTileFlipY(bool value)
+{
+    if (!usesGenesisMode5Editor() || characterEditorSlots_.empty()) return;
+    auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
+    if (slot.flipY == value) return;
+    slot.flipY = value;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveCharacterTilePriority(bool value)
+{
+    if (!usesGenesisMode5Editor() || characterEditorSlots_.empty()) return;
+    auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
+    if (slot.priority == value) return;
+    slot.priority = value;
+    emit projectChanged();
+}
+
 QVariantList EditorProjectController::characterEditorSlots() const
 {
     QVariantList result;
@@ -433,7 +530,12 @@ QVariantList EditorProjectController::characterEditorSlots() const
                                      {QStringLiteral("setIndex"), slot.setIndex},
                                      {QStringLiteral("patternIndex"), slot.patternIndex},
                                      {QStringLiteral("tileX"), slot.tileX},
-                                     {QStringLiteral("tileY"), slot.tileY}});
+                                     {QStringLiteral("tileY"), slot.tileY},
+                                     {QStringLiteral("plane"), slot.plane},
+                                     {QStringLiteral("palette"), slot.palette},
+                                     {QStringLiteral("flipX"), slot.flipX},
+                                     {QStringLiteral("flipY"), slot.flipY},
+                                     {QStringLiteral("priority"), slot.priority}});
     }
     return result;
 }
@@ -548,6 +650,8 @@ QVariantList EditorProjectController::activeSpritePlacements() const
                                      {QStringLiteral("flipY"),
                                       editScope_ == 1 && !usesSmsMode4Editor()
                                           && placement.flipY},
+                                     {QStringLiteral("priority"),
+                                      usesGenesisMode5Editor() && placement.priority},
                                      {QStringLiteral("profile"),
                                       usesSmsMode4Editor()
                                           ? QStringLiteral("sms-mode4")
@@ -588,6 +692,10 @@ QVariantList EditorProjectController::spriteEditorSlots() const
             values.insert(QStringLiteral("colorDepth"),
                           usesIndexed4BppEditor() ? 4
                           : (editScope_ == 1 ? placement.colorDepth : 1));
+            values.insert(QStringLiteral("palette"), placement.palette);
+            values.insert(QStringLiteral("flipX"), placement.flipX);
+            values.insert(QStringLiteral("flipY"), placement.flipY);
+            values.insert(QStringLiteral("priority"), placement.priority);
         } else {
             values.insert(QStringLiteral("size"), slot.size);
             values.insert(QStringLiteral("x"), 0);
@@ -596,6 +704,10 @@ QVariantList EditorProjectController::spriteEditorSlots() const
             values.insert(QStringLiteral("activeForPlacement"), false);
             values.insert(QStringLiteral("color"), 15);
             values.insert(QStringLiteral("colorDepth"), 1);
+            values.insert(QStringLiteral("palette"), 0);
+            values.insert(QStringLiteral("flipX"), false);
+            values.insert(QStringLiteral("flipY"), false);
+            values.insert(QStringLiteral("priority"), false);
         }
         result.push_back(values);
     }
@@ -738,6 +850,8 @@ void EditorProjectController::resetProjectData()
     characterForegroundColorIndex_ = 15;
     characterBackgroundColorIndex_ = 1;
     characterPaletteBank_ = 0;
+    activeCharacterPlane_ = 0;
+    genesisCompositePreview_ = false;
     characterEditorSlots_ = {{true, 0, 0, 0, 0}};
     activeCharacterEditor_ = 0;
     characterTilingMode_ = false;
@@ -880,9 +994,11 @@ void EditorProjectController::setActiveCharacterEditor(int value)
     if (activeCharacterEditor_ == value) return;
     activeCharacterEditor_ = value;
     const auto& slot = characterEditorSlots_[static_cast<std::size_t>(value)];
+    activeCharacterPlane_ = usesGenesisMode5Editor() ? slot.plane : 0;
     if (slot.loaded) {
         activeCharacterSet_ = slot.setIndex;
         activeCharacterPattern_ = slot.patternIndex;
+        if (usesGenesisMode5Editor()) characterPaletteBank_ = slot.palette;
     }
     emit projectChanged();
 }
@@ -1605,6 +1721,27 @@ bool EditorProjectController::extractScreenImagePatterns(
                           .arg(destinationPattern));
         return false;
     }
+    if (usesGenesisMode5Editor()) {
+        int newSlots = 0;
+        for (int sourceRow = 0; sourceRow < regionHeight; ++sourceRow) {
+            for (int sourceColumn = 0; sourceColumn < regionWidth; ++sourceColumn) {
+                const int tileX = (characterX + sourceColumn) * patternWidth;
+                const int tileY = (characterY + sourceRow) * patternHeight;
+                const bool exists = std::any_of(
+                    characterEditorSlots_.cbegin(), characterEditorSlots_.cend(),
+                    [this, tileX, tileY](const CharacterEditorSlot& slot) {
+                        return slot.plane == activeCharacterPlane_
+                            && slot.tileX == tileX && slot.tileY == tileY;
+                    });
+                if (!exists) ++newSlots;
+            }
+        }
+        const int maximumSlots = characterMapColumns() * characterMapRows() * 3;
+        if (static_cast<int>(characterEditorSlots_.size()) + newSlots > maximumSlots) {
+            setStatus({}, QStringLiteral("The selected region does not fit in the Genesis layer maps."));
+            return false;
+        }
+    }
 
     const QImage source = retrovdp::imageio::toQImage(*screenImage)
                               .convertToFormat(QImage::Format_RGBA8888);
@@ -1722,7 +1859,43 @@ bool EditorProjectController::extractScreenImagePatterns(
         ++characterRevision_;
     }
     activeCharacterPattern_ = destinationPattern;
-    if (!characterEditorSlots_.empty()) {
+    if (usesGenesisMode5Editor()) {
+        int firstImportedEditor = -1;
+        for (int sourceRow = 0; sourceRow < regionHeight; ++sourceRow) {
+            for (int sourceColumn = 0; sourceColumn < regionWidth; ++sourceColumn) {
+                const int sequence = verticalWrap
+                    ? sourceColumn * regionHeight + sourceRow
+                    : sourceRow * regionWidth + sourceColumn;
+                const int tileX = (characterX + sourceColumn) * patternWidth;
+                const int tileY = (characterY + sourceRow) * patternHeight;
+                auto match = std::find_if(
+                    characterEditorSlots_.begin(), characterEditorSlots_.end(),
+                    [this, tileX, tileY](const CharacterEditorSlot& slot) {
+                        return slot.plane == activeCharacterPlane_
+                            && slot.tileX == tileX && slot.tileY == tileY;
+                    });
+                if (match == characterEditorSlots_.end()) {
+                    characterEditorSlots_.push_back(
+                        {true, activeCharacterSet_, destinationPattern + sequence,
+                         tileX, tileY, activeCharacterPlane_, characterPaletteBank_});
+                    match = std::prev(characterEditorSlots_.end());
+                } else {
+                    match->loaded = true;
+                    match->setIndex = activeCharacterSet_;
+                    match->patternIndex = destinationPattern + sequence;
+                    match->palette = characterPaletteBank_;
+                    match->flipX = false;
+                    match->flipY = false;
+                    match->priority = false;
+                }
+                if (firstImportedEditor < 0) {
+                    firstImportedEditor = static_cast<int>(
+                        std::distance(characterEditorSlots_.begin(), match));
+                }
+            }
+        }
+        if (firstImportedEditor >= 0) activeCharacterEditor_ = firstImportedEditor;
+    } else if (!characterEditorSlots_.empty()) {
         auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
         slot.loaded = true;
         slot.setIndex = activeCharacterSet_;
@@ -1730,12 +1903,15 @@ bool EditorProjectController::extractScreenImagePatterns(
     }
     emit projectChanged();
     setStatus(QStringLiteral(
-        "Extracted %1 Screen Image patterns into Set %2 beginning at pattern %3 (%4 wrap).")
+        "Extracted %1 Screen Image patterns into Set %2 beginning at pattern %3 (%4 wrap)%5.")
                   .arg(patternCount)
                   .arg(activeCharacterSet_ + 1)
                   .arg(destinationPattern)
                   .arg(verticalWrap ? QStringLiteral("vertical")
-                                    : QStringLiteral("horizontal")));
+                                    : QStringLiteral("horizontal"))
+                  .arg(usesGenesisMode5Editor()
+                           ? QStringLiteral(" and placed them in the active Genesis layer")
+                           : QString()));
     return true;
 }
 
@@ -1801,16 +1977,20 @@ QString EditorProjectController::characterPatternPreview(
 
 void EditorProjectController::addCharacterEditor()
 {
-    constexpr std::size_t maximumEditors = 768;
+    const int columns = characterMapColumns();
+    const int rows = characterMapRows();
+    const std::size_t maximumEditors = usesGenesisMode5Editor()
+        ? static_cast<std::size_t>(columns * rows * 3) : 768U;
     if (characterEditorSlots_.size() >= maximumEditors) {
-        setStatus({}, QStringLiteral("A character tray can contain up to 768 pattern tiles."));
+        setStatus({}, QStringLiteral("The active target's character maps are full."));
         return;
     }
-    std::array<bool, 32 * 24> occupied{};
+    std::vector<bool> occupied(static_cast<std::size_t>(columns * rows));
     for (const auto& slot : characterEditorSlots_) {
-        const int column = std::clamp(slot.tileX / 8, 0, 31);
-        const int row = std::clamp(slot.tileY / 8, 0, 23);
-        occupied[static_cast<std::size_t>(row * 32 + column)] = true;
+        if (usesGenesisMode5Editor() && slot.plane != activeCharacterPlane_) continue;
+        const int column = std::clamp(slot.tileX / 8, 0, columns - 1);
+        const int row = std::clamp(slot.tileY / 8, 0, rows - 1);
+        occupied[static_cast<std::size_t>(row * columns + column)] = true;
     }
     int placement = 0;
     while (placement < static_cast<int>(occupied.size())
@@ -1820,7 +2000,8 @@ void EditorProjectController::addCharacterEditor()
     if (placement >= static_cast<int>(occupied.size())) placement = 0;
     characterEditorSlots_.push_back(
         {false, activeCharacterSet_, activeCharacterPattern_,
-         (placement % 32) * 8, (placement / 32) * 8});
+         (placement % columns) * 8, (placement / columns) * 8,
+         activeCharacterPlane_, characterPaletteBank_});
     activeCharacterEditor_ = static_cast<int>(characterEditorSlots_.size()) - 1;
     emit projectChanged();
 }
@@ -1832,9 +2013,11 @@ void EditorProjectController::removeActiveCharacterEditor()
     activeCharacterEditor_ = std::min(
         activeCharacterEditor_, static_cast<int>(characterEditorSlots_.size()) - 1);
     const auto& slot = characterEditorSlots_[static_cast<std::size_t>(activeCharacterEditor_)];
+    activeCharacterPlane_ = usesGenesisMode5Editor() ? slot.plane : 0;
     if (slot.loaded) {
         activeCharacterSet_ = slot.setIndex;
         activeCharacterPattern_ = slot.patternIndex;
+        if (usesGenesisMode5Editor()) characterPaletteBank_ = slot.palette;
     }
     emit projectChanged();
 }
@@ -1874,6 +2057,137 @@ void EditorProjectController::moveCharacterTile(int editorIndex, int x, int y)
     slot.tileX = snappedX;
     slot.tileY = snappedY;
     emit projectChanged();
+}
+
+bool EditorProjectController::exportGenesisCharacterAssets(const QUrl& directoryUrl)
+{
+    if (!usesGenesisMode5Editor()) {
+        setStatus({}, QStringLiteral("Select the Sega Genesis target before exporting native character assets."));
+        return false;
+    }
+    const QString path = directoryUrl.toLocalFile();
+    QDir directory(path);
+    if (path.isEmpty() || !directory.exists()) {
+        setStatus({}, QStringLiteral("Choose an existing local export folder."));
+        return false;
+    }
+
+    QString base = projectName_.trimmed().toUpper();
+    for (QChar& character : base) {
+        if (!character.isLetterOrNumber() && character != QLatin1Char('_')
+            && character != QLatin1Char('-')) character = QLatin1Char('_');
+    }
+    while (base.contains(QStringLiteral("__"))) base.replace(QStringLiteral("__"), QStringLiteral("_"));
+    if (base.isEmpty()) base = QStringLiteral("GENESIS");
+
+    QByteArray tiles;
+    tiles.reserve(characterPatternsPerSet() * 32);
+    const auto& set = characterSets_[static_cast<std::size_t>(activeCharacterSet_)];
+    for (const auto& pattern : set.patterns) {
+        for (int row = 0; row < 8; ++row) {
+            const int foreground = (pattern.colors[static_cast<std::size_t>(row)] >> 4U) & 0x0f;
+            const int background = pattern.colors[static_cast<std::size_t>(row)] & 0x0f;
+            for (int column = 0; column < 8; column += 2) {
+                const auto pixel = [&](int x) {
+                    if (pattern.indexedOverride)
+                        return static_cast<int>(pattern.indexedPixels[
+                            static_cast<std::size_t>(row * 8 + x)] & 0x0fU);
+                    return (pattern.bitmap[static_cast<std::size_t>(row)]
+                            & (0x80U >> x)) != 0 ? foreground : background;
+                };
+                tiles.append(static_cast<char>((pixel(column) << 4) | pixel(column + 1)));
+            }
+        }
+    }
+
+    const int mapColumns = imageInput_->targetWidth() >= 320 ? 64 : 32;
+    constexpr int mapRows = 32;
+    std::array<QByteArray, 3> maps;
+    std::array<std::vector<bool>, 3> occupied;
+    for (int plane = 0; plane < 3; ++plane) {
+        maps[static_cast<std::size_t>(plane)] = QByteArray(mapColumns * mapRows * 2, '\0');
+        occupied[static_cast<std::size_t>(plane)].resize(
+            static_cast<std::size_t>(mapColumns * mapRows));
+    }
+    for (const auto& slot : characterEditorSlots_) {
+        if (!slot.loaded) continue;
+        if (slot.setIndex != activeCharacterSet_) {
+            setStatus({}, QStringLiteral("Genesis maps reference more than one pattern set. Select one set per native export."));
+            return false;
+        }
+        const int plane = std::clamp(slot.plane, 0, 2);
+        const int column = slot.tileX / 8;
+        const int row = slot.tileY / 8;
+        if (column < 0 || column >= mapColumns || row < 0 || row >= mapRows) continue;
+        const std::size_t cell = static_cast<std::size_t>(row * mapColumns + column);
+        if (occupied[static_cast<std::size_t>(plane)][cell]) {
+            setStatus({}, QStringLiteral("Two tiles occupy the same cell in %1. Move or remove one before export.")
+                              .arg(plane == 0 ? QStringLiteral("Plane A")
+                                   : plane == 1 ? QStringLiteral("Plane B")
+                                                : QStringLiteral("Window")));
+            return false;
+        }
+        occupied[static_cast<std::size_t>(plane)][cell] = true;
+        const std::uint16_t word = static_cast<std::uint16_t>(
+            (slot.patternIndex & 0x07ff)
+            | (slot.flipX ? 0x0800 : 0)
+            | (slot.flipY ? 0x1000 : 0)
+            | ((slot.palette & 0x03) << 13)
+            | (slot.priority ? 0x8000 : 0));
+        QByteArray& map = maps[static_cast<std::size_t>(plane)];
+        map[static_cast<qsizetype>(cell * 2)] = static_cast<char>(word >> 8U);
+        map[static_cast<qsizetype>(cell * 2 + 1)] = static_cast<char>(word & 0xffU);
+    }
+
+    QByteArray palette;
+    palette.reserve(128);
+    const QVariantList colors = imageInput_->paletteColors();
+    for (int index = 0; index < 64; ++index) {
+        const QColor color = index < colors.size() ? colors.at(index).value<QColor>() : QColor(Qt::black);
+        const int red = std::clamp(static_cast<int>(std::lround(color.red() * 7.0 / 255.0)), 0, 7);
+        const int green = std::clamp(static_cast<int>(std::lround(color.green() * 7.0 / 255.0)), 0, 7);
+        const int blue = std::clamp(static_cast<int>(std::lround(color.blue() * 7.0 / 255.0)), 0, 7);
+        const std::uint16_t word = static_cast<std::uint16_t>(
+            (blue << 9U) | (green << 5U) | (red << 1U));
+        palette.append(static_cast<char>(word >> 8U));
+        palette.append(static_cast<char>(word & 0xffU));
+    }
+
+    QByteArray registers(24, '\0');
+    const bool wide = mapColumns == 64;
+    const bool pal30 = imageInput_->targetHeight() >= 240;
+    registers[0] = static_cast<char>(0x04);
+    registers[1] = static_cast<char>(0x74 | (pal30 ? 0x08 : 0));
+    registers[2] = static_cast<char>(0x30);
+    registers[3] = static_cast<char>(0x2c);
+    registers[4] = static_cast<char>(0x07);
+    registers[5] = static_cast<char>(wide ? 0x54 : 0x5f);
+    registers[10] = static_cast<char>(0xff);
+    registers[12] = static_cast<char>(wide ? 0x81 : 0x00);
+    registers[13] = static_cast<char>(wide ? 0x2b : 0x2e);
+    registers[15] = static_cast<char>(0x02);
+    registers[16] = static_cast<char>(wide ? 0x01 : 0x00);
+
+    const auto writeFile = [&](const QString& suffix, const QByteArray& data) {
+        QSaveFile file(directory.filePath(base + suffix));
+        if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size()
+            || !file.commit()) {
+            setStatus({}, QStringLiteral("Could not write %1: %2")
+                              .arg(file.fileName(), file.errorString()));
+            return false;
+        }
+        return true;
+    };
+    if (!writeFile(QStringLiteral(".TILES"), tiles)
+        || !writeFile(QStringLiteral(".PLANE_A.MAP"), maps[0])
+        || !writeFile(QStringLiteral(".PLANE_B.MAP"), maps[1])
+        || !writeFile(QStringLiteral(".WINDOW.MAP"), maps[2])
+        || !writeFile(QStringLiteral(".PAL"), palette)
+        || !writeFile(QStringLiteral(".REG"), registers)) return false;
+
+    setStatus(QStringLiteral("Exported Genesis tiles, three maps, palette, and display registers to %1")
+                  .arg(QDir::toNativeSeparators(directory.absolutePath())));
+    return true;
 }
 
 bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
@@ -1928,7 +2242,12 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                         {QStringLiteral("set"), editor.setIndex},
                         {QStringLiteral("pattern"), editor.patternIndex},
                         {QStringLiteral("tileX"), editor.tileX},
-                        {QStringLiteral("tileY"), editor.tileY}});
+                        {QStringLiteral("tileY"), editor.tileY},
+                        {QStringLiteral("plane"), editor.plane},
+                        {QStringLiteral("palette"), editor.palette},
+                        {QStringLiteral("flipX"), editor.flipX},
+                        {QStringLiteral("flipY"), editor.flipY},
+                        {QStringLiteral("priority"), editor.priority}});
     }
     QJsonArray spriteSets;
     for (const auto& set : spriteSets_) {
@@ -1975,7 +2294,8 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                                               {QStringLiteral("palette"),
                                                placement.palette},
                                               {QStringLiteral("flipX"), placement.flipX},
-                                              {QStringLiteral("flipY"), placement.flipY}});
+                                              {QStringLiteral("flipY"), placement.flipY},
+                                              {QStringLiteral("priority"), placement.priority}});
         }
         spriteSets.push_back(QJsonObject{{QStringLiteral("name"), set.name},
                                           {QStringLiteral("capacity"), 80},
@@ -2047,6 +2367,8 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                      {QStringLiteral("backgroundColor"),
                       characterBackgroundColorIndex_},
                      {QStringLiteral("paletteBank"), characterPaletteBank_},
+                     {QStringLiteral("activePlane"), activeCharacterPlane_},
+                     {QStringLiteral("compositePreview"), genesisCompositePreview_},
                      {QStringLiteral("editors"), characterEditors},
                      {QStringLiteral("sets"), characterSets}}},
         {QStringLiteral("spriteEditor"),
@@ -2203,6 +2525,11 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
     characterPaletteBank_ = std::clamp(
         character.value(QStringLiteral("paletteBank")).toInt(), 0,
         usesGenesisMode5Editor() ? 3 : 0);
+    activeCharacterPlane_ = std::clamp(
+        character.value(QStringLiteral("activePlane")).toInt(), 0,
+        usesGenesisMode5Editor() ? 2 : 0);
+    genesisCompositePreview_ = usesGenesisMode5Editor()
+        && character.value(QStringLiteral("compositePreview")).toBool();
     characterTilingMode_ = character.value(QStringLiteral("tilingMode")).toBool();
     for (int index = 0; index < static_cast<int>(characterSets_.size()); ++index) {
         characterSets_[static_cast<std::size_t>(index)] = makeCharacterSet(index + 1);
@@ -2246,19 +2573,37 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
 
     characterEditorSlots_.clear();
     const QJsonArray savedEditors = character.value(QStringLiteral("editors")).toArray();
-    for (int index = 0; index < std::min(768, static_cast<int>(savedEditors.size())); ++index) {
+    const int mapColumns = characterMapColumns();
+    const int mapRows = characterMapRows();
+    const int maximumSavedEditors = usesGenesisMode5Editor()
+        ? mapColumns * mapRows * 3 : 768;
+    for (int index = 0;
+         index < std::min(maximumSavedEditors, static_cast<int>(savedEditors.size()));
+         ++index) {
         const QJsonObject savedEditor = savedEditors[index].toObject();
-        const int defaultX = (index % 32) * 8;
-        const int defaultY = (index / 32) * 8;
+        const int defaultX = (index % mapColumns) * 8;
+        const int defaultY = ((index / mapColumns) % mapRows) * 8;
         characterEditorSlots_.push_back(
             {savedEditor.value(QStringLiteral("loaded")).toBool(),
              std::clamp(savedEditor.value(QStringLiteral("set")).toInt(), 0, 2),
              std::clamp(savedEditor.value(QStringLiteral("pattern")).toInt(), 0,
                         characterPatternsPerSet() - 1),
              snapCharacterTileCoordinate(
-                 savedEditor.value(QStringLiteral("tileX")).toInt(defaultX), 248),
+                 savedEditor.value(QStringLiteral("tileX")).toInt(defaultX),
+                 (mapColumns - 1) * 8),
              snapCharacterTileCoordinate(
-                 savedEditor.value(QStringLiteral("tileY")).toInt(defaultY), 184)});
+                 savedEditor.value(QStringLiteral("tileY")).toInt(defaultY),
+                 (mapRows - 1) * 8),
+             std::clamp(savedEditor.value(QStringLiteral("plane")).toInt(), 0,
+                        usesGenesisMode5Editor() ? 2 : 0),
+             std::clamp(savedEditor.value(QStringLiteral("palette")).toInt(), 0,
+                        usesGenesisMode5Editor() ? 3 : 0),
+             usesGenesisMode5Editor()
+                 && savedEditor.value(QStringLiteral("flipX")).toBool(),
+             usesGenesisMode5Editor()
+                 && savedEditor.value(QStringLiteral("flipY")).toBool(),
+             usesGenesisMode5Editor()
+                 && savedEditor.value(QStringLiteral("priority")).toBool()});
     }
     if (characterEditorSlots_.empty()) {
         characterEditorSlots_.push_back(
@@ -2272,7 +2617,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
     if (activeEditor.loaded) {
         activeCharacterSet_ = activeEditor.setIndex;
         activeCharacterPattern_ = activeEditor.patternIndex;
+        characterPaletteBank_ = activeEditor.palette;
     }
+    activeCharacterPlane_ = usesGenesisMode5Editor() ? activeEditor.plane : 0;
 
     const QJsonObject sprite = root.value(QStringLiteral("spriteEditor")).toObject();
     spriteGlobalSize_ = normalizedSpriteSize(
@@ -2359,6 +2706,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 savedPlacement.value(QStringLiteral("palette")).toInt(), 0, 7);
             placement.flipX = savedPlacement.value(QStringLiteral("flipX")).toBool();
             placement.flipY = savedPlacement.value(QStringLiteral("flipY")).toBool();
+            placement.priority = usesGenesisMode5Editor()
+                && savedPlacement.value(QStringLiteral("priority")).toBool();
         }
         spriteSets_.push_back(std::move(set));
     }

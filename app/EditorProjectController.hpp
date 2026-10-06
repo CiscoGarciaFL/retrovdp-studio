@@ -41,6 +41,12 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(int characterForegroundColorIndex READ characterForegroundColorIndex WRITE setCharacterForegroundColorIndex NOTIFY projectChanged)
     Q_PROPERTY(int characterBackgroundColorIndex READ characterBackgroundColorIndex WRITE setCharacterBackgroundColorIndex NOTIFY projectChanged)
     Q_PROPERTY(int characterPaletteBank READ characterPaletteBank WRITE setCharacterPaletteBank NOTIFY projectChanged)
+    Q_PROPERTY(int activeCharacterPlane READ activeCharacterPlane WRITE setActiveCharacterPlane NOTIFY projectChanged)
+    Q_PROPERTY(bool genesisCompositePreview READ genesisCompositePreview WRITE setGenesisCompositePreview NOTIFY projectChanged)
+    Q_PROPERTY(int activeCharacterTilePalette READ activeCharacterTilePalette WRITE setActiveCharacterTilePalette NOTIFY projectChanged)
+    Q_PROPERTY(bool activeCharacterTileFlipX READ activeCharacterTileFlipX WRITE setActiveCharacterTileFlipX NOTIFY projectChanged)
+    Q_PROPERTY(bool activeCharacterTileFlipY READ activeCharacterTileFlipY WRITE setActiveCharacterTileFlipY NOTIFY projectChanged)
+    Q_PROPERTY(bool activeCharacterTilePriority READ activeCharacterTilePriority WRITE setActiveCharacterTilePriority NOTIFY projectChanged)
     Q_PROPERTY(int characterRevision READ characterRevision NOTIFY projectChanged)
     Q_PROPERTY(QVariantList characterEditorSlots READ characterEditorSlots NOTIFY projectChanged)
     Q_PROPERTY(int activeCharacterEditor READ activeCharacterEditor WRITE setActiveCharacterEditor NOTIFY projectChanged)
@@ -65,6 +71,7 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(int spriteGlobalSize READ spriteGlobalSize WRITE setSpriteGlobalSize NOTIFY projectChanged)
     Q_PROPERTY(int spriteDrawingColorIndex READ spriteDrawingColorIndex WRITE setSpriteDrawingColorIndex NOTIFY projectChanged)
     Q_PROPERTY(int activeSpritePaletteBank READ activeSpritePaletteBank WRITE setActiveSpritePaletteBank NOTIFY projectChanged)
+    Q_PROPERTY(bool activeSpritePriority READ activeSpritePriority WRITE setActiveSpritePriority NOTIFY projectChanged)
     Q_PROPERTY(int activeSpriteColorDepth READ activeSpriteColorDepth WRITE setActiveSpriteColorDepth NOTIFY projectChanged)
     Q_PROPERTY(int spriteRevision READ spriteRevision NOTIFY projectChanged)
     Q_PROPERTY(QVariantList spriteSetNames READ spriteSetNames NOTIFY projectChanged)
@@ -119,6 +126,12 @@ public:
         return characterBackgroundColorIndex_;
     }
     [[nodiscard]] int characterPaletteBank() const { return characterPaletteBank_; }
+    [[nodiscard]] int activeCharacterPlane() const { return activeCharacterPlane_; }
+    [[nodiscard]] bool genesisCompositePreview() const { return genesisCompositePreview_; }
+    [[nodiscard]] int activeCharacterTilePalette() const;
+    [[nodiscard]] bool activeCharacterTileFlipX() const;
+    [[nodiscard]] bool activeCharacterTileFlipY() const;
+    [[nodiscard]] bool activeCharacterTilePriority() const;
     [[nodiscard]] int characterRevision() const { return characterRevision_; }
     [[nodiscard]] QVariantList characterEditorSlots() const;
     [[nodiscard]] int activeCharacterEditor() const { return activeCharacterEditor_; }
@@ -146,6 +159,7 @@ public:
     [[nodiscard]] int spriteGlobalSize() const { return spriteGlobalSize_; }
     [[nodiscard]] int spriteDrawingColorIndex() const { return spriteDrawingColorIndex_; }
     [[nodiscard]] int activeSpritePaletteBank() const;
+    [[nodiscard]] bool activeSpritePriority() const;
     [[nodiscard]] int activeSpriteColorDepth() const;
     [[nodiscard]] int spriteRevision() const { return spriteRevision_; }
     [[nodiscard]] QVariantList spriteSetNames() const;
@@ -183,6 +197,12 @@ public:
     void setCharacterForegroundColorIndex(int value);
     void setCharacterBackgroundColorIndex(int value);
     void setCharacterPaletteBank(int value);
+    void setActiveCharacterPlane(int value);
+    void setGenesisCompositePreview(bool value);
+    void setActiveCharacterTilePalette(int value);
+    void setActiveCharacterTileFlipX(bool value);
+    void setActiveCharacterTileFlipY(bool value);
+    void setActiveCharacterTilePriority(bool value);
     void setActiveCharacterEditor(int value);
     void setCharacterTilingMode(bool value);
     void setCharacterPanActive(bool value);
@@ -192,6 +212,7 @@ public:
     void setSpriteGlobalSize(int value);
     void setSpriteDrawingColorIndex(int value);
     void setActiveSpritePaletteBank(int value);
+    void setActiveSpritePriority(bool value);
     void setActiveSpriteColorDepth(int value);
     void setActiveSpriteEditor(int value);
     void setSpritePlacementMode(bool value);
@@ -295,6 +316,7 @@ public:
     Q_INVOKABLE void moveCharacterTile(int editorIndex, int x, int y);
     Q_INVOKABLE bool saveRecipe(const QUrl& fileUrl);
     Q_INVOKABLE bool loadRecipe(const QUrl& fileUrl);
+    Q_INVOKABLE bool exportGenesisCharacterAssets(const QUrl& directoryUrl);
     Q_INVOKABLE void clearStatus();
 
 signals:
@@ -318,6 +340,11 @@ private:
         int patternIndex{};
         int tileX{};
         int tileY{};
+        int plane{};
+        int palette{};
+        bool flipX{};
+        bool flipY{};
+        bool priority{};
     };
     struct CharacterPatternChange {
         int setIndex{};
@@ -340,6 +367,7 @@ private:
         int palette{};
         bool flipX{};
         bool flipY{};
+        bool priority{};
     };
     struct SpritePattern {
         std::array<std::uint8_t, 1024> baselinePixels{};
@@ -433,6 +461,8 @@ private:
     int characterForegroundColorIndex_{15};
     int characterBackgroundColorIndex_{1};
     int characterPaletteBank_{};
+    int activeCharacterPlane_{};
+    bool genesisCompositePreview_{};
     int characterRevision_{};
     std::vector<CharacterEditorSlot> characterEditorSlots_;
     int activeCharacterEditor_{};
