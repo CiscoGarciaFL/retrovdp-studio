@@ -3,18 +3,34 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
-// A 1:1 TMS9918A screen grid. Each editor slot is represented by one
-// independently positioned 8x8 tile; duplicate patterns remain linked for
-// selection/highlighting while retaining separate coordinates.
+// A target-sized tile-map grid. Genesis projects can author and composite
+// Plane A, Plane B, Window, and the active sprite set using VDP priority order.
 Item {
     id: root
     required property real zoomScale
 
-    readonly property var slots: editorProject.characterEditorSlots
+    readonly property var allSlots: editorProject.characterEditorSlots
+    readonly property bool genesis:
+        editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+    readonly property var slots: {
+        if (!genesis || editorProject.genesisCompositePreview)
+            return allSlots
+        const selected = []
+        for (let index = 0; index < allSlots.length; ++index) {
+            if (allSlots[index].plane === editorProject.activeCharacterPlane)
+                selected.push(allSlots[index])
+        }
+        return selected
+    }
     readonly property int slotCount: slots.length
     readonly property int renderedTileCount: tileRepeater.count
-    readonly property var activeSlot:
-        slotCount > 0 ? slots[editorProject.activeCharacterEditor] : null
+    readonly property var activeSlot: {
+        for (let index = 0; index < allSlots.length; ++index) {
+            if (allSlots[index].index === editorProject.activeCharacterEditor)
+                return allSlots[index]
+        }
+        return null
+    }
     readonly property int relatedTileCount: {
         if (!activeSlot || !activeSlot.loaded)
             return 0
@@ -29,14 +45,26 @@ Item {
         return count
     }
 
-    function paletteColor(index) {
-        const colors = editorProject.characterPaletteColors
-        if (index < 0 || index >= colors.length)
+    function paletteColor(index, bank) {
+        const colors = genesis ? imageInput.paletteColors
+                               : editorProject.characterPaletteColors
+        const resolved = genesis ? bank * 16 + index : index
+        if (resolved < 0 || resolved >= colors.length)
             return "#000000"
         if (index === 0
                 && editorProject.activeTargetInfo.id !== "sega-sms-vdp")
             return "#303842"
-        return colors[index]
+        return colors[resolved]
+    }
+
+    function tilePriorityZ(slot) {
+        if (!genesis || !editorProject.genesisCompositePreview)
+            return slot.index + 10
+        if (slot.plane === 1)
+            return slot.priority ? 50 : 10
+        if (slot.plane === 2)
+            return slot.priority ? 80 : 40
+        return slot.priority ? 60 : 20
     }
 
     Flickable {
@@ -117,7 +145,7 @@ Item {
                             slotData.setIndex, slotData.patternIndex)
                     }
                     readonly property bool active:
-                        index === editorProject.activeCharacterEditor
+                        slotData.index === editorProject.activeCharacterEditor
                     readonly property bool relatedPattern:
                         !active && slotData.loaded && root.activeSlot
                         && root.activeSlot.loaded
@@ -127,14 +155,23 @@ Item {
                     y: slotData.tileY * root.zoomScale
                     width: 8 * root.zoomScale
                     height: 8 * root.zoomScale
-                    z: active ? 1000 : relatedPattern ? 500 : index + 10
+                    z: root.genesis && editorProject.genesisCompositePreview
+                       ? root.tilePriorityZ(slotData)
+                       : active ? 1000 : relatedPattern ? 500
+                                                  : root.tilePriorityZ(slotData)
 
                     Repeater {
                         model: 64
                         Rectangle {
                             required property int index
-                            readonly property int patternRow: Math.floor(index / 8)
-                            readonly property int patternColumn: index % 8
+                            readonly property int displayRow: Math.floor(index / 8)
+                            readonly property int displayColumn: index % 8
+                            readonly property int patternRow:
+                                root.genesis && tile.slotData.flipY
+                                ? 7 - displayRow : displayRow
+                            readonly property int patternColumn:
+                                root.genesis && tile.slotData.flipX
+                                ? 7 - displayColumn : displayColumn
                             readonly property int colorIndex:
                                 !tile.slotData.loaded || tile.patternRows.length !== 8
                                 ? 0
@@ -144,13 +181,17 @@ Item {
                                       & (0x80 >> patternColumn)) !== 0
                                      ? tile.patternRows[patternRow].foreground
                                      : tile.patternRows[patternRow].background)
-                            x: patternColumn * root.zoomScale
-                            y: patternRow * root.zoomScale
+                            x: displayColumn * root.zoomScale
+                            y: displayRow * root.zoomScale
                             width: root.zoomScale
                             height: root.zoomScale
+                            visible: !(root.genesis
+                                       && editorProject.genesisCompositePreview
+                                       && colorIndex === 0)
                             color: !tile.slotData.loaded
                                    || tile.patternRows.length !== 8 ? "#20272e"
-                                   : root.paletteColor(colorIndex)
+                                   : root.paletteColor(colorIndex,
+                                                       tile.slotData.palette || 0)
                         }
                     }
 
@@ -218,7 +259,7 @@ Item {
                     }
                     TapHandler {
                         acceptedButtons: Qt.LeftButton
-                        onTapped: editorProject.activeCharacterEditor = tile.index
+                        onTapped: editorProject.activeCharacterEditor = tile.slotData.index
                     }
                     DragHandler {
                         id: tileDrag
@@ -231,16 +272,76 @@ Item {
                             if (active) {
                                 startingX = tile.slotData.tileX
                                 startingY = tile.slotData.tileY
-                                editorProject.activeCharacterEditor = tile.index
+                                editorProject.activeCharacterEditor = tile.slotData.index
                             }
                         }
                         onTranslationChanged: {
                             if (!active)
                                 return
                             editorProject.moveCharacterTile(
-                                tile.index,
+                                tile.slotData.index,
                                 startingX + translation.x / root.zoomScale,
                                 startingY + translation.y / root.zoomScale)
+                        }
+                    }
+                }
+            }
+
+            Repeater {
+                id: compositeSpriteRepeater
+                model: root.genesis && editorProject.genesisCompositePreview
+                       ? editorProject.activeSpritePlacements : []
+
+                delegate: Item {
+                    id: compositeSprite
+                    required property int index
+                    required property var modelData
+                    readonly property var placement: modelData
+                    readonly property int spriteWidth:
+                        editorProject.spritePatternWidth(placement.size)
+                    readonly property int spriteHeight:
+                        editorProject.spritePatternHeight(placement.size)
+                    readonly property var pixels: {
+                        const revision = editorProject.spriteRevision
+                        return editorProject.spritePatternPixels(
+                            editorProject.activeSpriteSet,
+                            placement.index, placement.size)
+                    }
+                    visible: placement.visible
+                    x: placement.x * root.zoomScale
+                    y: placement.y * root.zoomScale
+                    width: spriteWidth * root.zoomScale
+                    height: spriteHeight * root.zoomScale
+                    z: placement.priority ? 70 : 30
+
+                    Repeater {
+                        model: compositeSprite.spriteWidth
+                               * compositeSprite.spriteHeight
+                        Rectangle {
+                            required property int index
+                            readonly property int displayRow:
+                                Math.floor(index / compositeSprite.spriteWidth)
+                            readonly property int displayColumn:
+                                index % compositeSprite.spriteWidth
+                            readonly property int sourceRow:
+                                compositeSprite.placement.flipY
+                                ? compositeSprite.spriteHeight - 1 - displayRow
+                                : displayRow
+                            readonly property int sourceColumn:
+                                compositeSprite.placement.flipX
+                                ? compositeSprite.spriteWidth - 1 - displayColumn
+                                : displayColumn
+                            readonly property int colorIndex:
+                                compositeSprite.pixels[
+                                    sourceRow * compositeSprite.spriteWidth
+                                    + sourceColumn] || 0
+                            visible: colorIndex !== 0
+                            x: displayColumn * root.zoomScale
+                            y: displayRow * root.zoomScale
+                            width: root.zoomScale
+                            height: root.zoomScale
+                            color: root.paletteColor(
+                                colorIndex, compositeSprite.placement.palette || 0)
                         }
                     }
                 }

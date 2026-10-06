@@ -248,6 +248,12 @@ ApplicationWindow {
                       qsTr("JSON files (*.json)")]
         onAccepted: editorProject.saveRecipe(selectedFile)
     }
+    FolderDialog {
+        id: genesisCharacterExportDialog
+        objectName: "genesisCharacterExportDialog"
+        title: qsTr("Export native Genesis character assets")
+        onAccepted: editorProject.exportGenesisCharacterAssets(selectedFolder)
+    }
     Action {
         id: reloadAction
         objectName: "reloadAction"
@@ -261,8 +267,15 @@ ApplicationWindow {
         objectName: "exportAction"
         text: qsTr("&Export…")
         shortcut: "Ctrl+E"
-        enabled: window.workspaceMode === 0 && imageInput.hasConversion
-        onTriggered: exportDialog.open()
+        enabled: (window.workspaceMode === 0 && imageInput.hasConversion)
+                 || (window.workspaceMode === 1
+                     && editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+        onTriggered: {
+            if (window.workspaceMode === 1)
+                genesisCharacterExportDialog.open()
+            else
+                exportDialog.open()
+        }
     }
     Action {
         id: exitAction

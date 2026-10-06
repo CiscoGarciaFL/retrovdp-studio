@@ -99,15 +99,23 @@ The `sega-genesis-vdp` target has the following current interpretation:
 | Workspace | Disposition | Implemented scope |
 | --- | --- | --- |
 | Screen Image | Native constrained plane slice | Non-interlaced Mode V H32 256×224, H40 320×224, PAL H32 256×240, and PAL H40 320×240; four 16-entry RGB333 palette banks with shared backdrop entry; 8×8 packed 4bpp tiles; big-endian Plane A map entries with palette and flip attributes; flip-aware tile reuse; display-register output; RAW and PNG export |
-| Character | Native | 8×8 packed 4bpp indexed tiles; 2,048 project slots; four selectable palette banks; mode-derived 32/40-column by 28/30-row visible maps; full-color drawing, extraction, transforms, preview, clipboard, and project persistence |
-| Sprite | Native editor interpretation with serialization deferred | 80 authored sprite entries; independent 8/16/24/32-pixel width and height; packed 4bpp indexed pixels; palette banks 0–3; index 0 transparency; per-sprite size, flip, position, and priority-ready attributes; fixed-depth UI; rectangular rotation disabled |
+| Character | Native | 8×8 packed 4bpp indexed tiles; 2,048 project slots; independent Plane A, Plane B, and Window maps; per-cell palette, flip, and priority attributes; mode-derived 32/40-column by 28/30-row visible maps; priority-composite preview with sprites; native `.TILES`, three `.MAP`, `.PAL`, and `.REG` export; full-color drawing, extraction, transforms, preview, clipboard, and project persistence |
+| Sprite | Native editor interpretation with SAT serialization deferred | 80 authored sprite entries; independent 8/16/24/32-pixel width and height; packed 4bpp indexed pixels; palette banks 0–3; index 0 transparency; per-sprite size, flip, position, and high/low priority attributes; fixed-depth UI; rectangular rotation disabled |
 
-Screen Image deliberately emits one opaque Scroll A plane. It does not infer
-Scroll B, Window, sprite composition, priority layering, or interlaced Mode 2
-from a flat image. The current Character and Sprite workspaces preserve native
-geometry, color depth, palette selection, capacity, and project data, but the
-application does not yet export their authored maps, sprite patterns, or linked
-SAT. Those structured exports remain a shared editor/export milestone.
+The Genesis Sprite workspace presents one size-aware entry grid rather than the
+global 8×8 and 16×16 banks used by older VDP targets. Each thumbnail reports
+its entry's saved width and height, and selecting it preserves that rectangular
+geometry. The active H32 or H40 mode controls whether the grid contains 64 or
+80 entries.
+
+Screen Image deliberately emits one flattened Scroll A conversion because a
+single bitmap contains no reliable layer or priority information. Multi-layer
+scenes are authored explicitly in the Character tiling workspace: Plane A,
+Plane B, and Window each have their own map, and composite preview applies the
+hardware low/high order with the active sprite set. Screen Image regions can be
+extracted directly into whichever of those three layers is active. Character export writes the
+shared tile set, all three maps, CRAM, and display-register state. Sprite
+pattern and linked-SAT export remain a separate structured-export milestone.
 
 The four standard non-interlaced modes are separate descriptors because H32
 and H40 have different visible widths, plane-map storage, sprite-per-line

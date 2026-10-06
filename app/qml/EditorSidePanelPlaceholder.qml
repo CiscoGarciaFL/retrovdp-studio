@@ -80,7 +80,9 @@ ScrollView {
                     objectName: root.objectName + "ImportFromSourceButton"
                     Layout.fillWidth: true
                     text: root.editorKind === 0
-                          ? qsTr("Extract into active pattern set…")
+                          ? editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+                            ? qsTr("Extract into active layer…")
+                            : qsTr("Extract into active pattern set…")
                           : qsTr("Populate sprite placement from Screen Image")
                     enabled: root.editorKind === 0 && imageInput.hasConversion
                     ToolTip.visible: hovered
@@ -253,18 +255,39 @@ ScrollView {
                         }
                         onActivated: index => editorProject.activeSpritePaletteBank = index
                     }
-                    Label { text: qsTr("Placement width") }
+                    Label {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+                        text: qsTr("Display priority")
+                    }
+                    CheckBox {
+                        objectName: root.objectName + "SpritePriorityCheckBox"
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+                        text: qsTr("High")
+                        checked: editorProject.activeSpritePriority
+                        onToggled: editorProject.activeSpritePriority = checked
+                    }
+                    Label {
+                        visible: root.editorKind === 1
+                        text: qsTr("Placement width")
+                    }
                     SpinBox {
                         objectName: root.objectName + "PlacementWidthSpinBox"
+                        visible: root.editorKind === 1
                         from: 8
                         to: 1024
                         value: editorProject.placementWidth
                         editable: true
                         onValueModified: editorProject.placementWidth = value
                     }
-                    Label { text: qsTr("Placement height") }
+                    Label {
+                        visible: root.editorKind === 1
+                        text: qsTr("Placement height")
+                    }
                     SpinBox {
                         objectName: root.objectName + "PlacementHeightSpinBox"
+                        visible: root.editorKind === 1
                         from: 8
                         to: 1024
                         value: editorProject.placementHeight
@@ -275,11 +298,91 @@ ScrollView {
                 Label {
                     visible: root.editorKind === 1
                     Layout.fillWidth: true
-                    text: editorProject.activeTargetInfo.spritePerItemSize
+                    text: editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+                          ? qsTr("Mode V gives every sprite its own 8, 16, 24, or 32-pixel width and height, a 4bpp palette, and transparent color index 0. Choose the entry first, then set its size before drawing.")
+                          : editorProject.activeTargetInfo.spritePerItemSize
                           ? qsTr("This target stores size and color depth per sprite. Target-specific edits are kept separate from compatible base data.")
                           : editorProject.activeTargetInfo.id === "sega-sms-vdp"
                             ? qsTr("Mode 4 uses one global 8×8 or 8×16 size, 4bpp pixels, the dedicated 16-color sprite palette, 64 sprite entries, and an 8-sprites-per-scanline limit.")
                           : qsTr("This target applies one global sprite size. Each sprite uses one opaque hardware color plus transparency.")
+                    wrapMode: Text.WordWrap
+                    color: palette.placeholderText
+                }
+            }
+        }
+
+        ThemedGroupBox {
+            objectName: root.objectName + "GenesisMapOptionsGroup"
+            visible: root.editorKind === 0
+                     && editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+            title: qsTr("Genesis Map Composition")
+            Layout.fillWidth: true
+
+            ColumnLayout {
+                anchors.fill: parent
+
+                GridLayout {
+                    columns: 2
+                    Layout.fillWidth: true
+
+                    Label { text: qsTr("Authoring layer") }
+                    ComboBox {
+                        objectName: root.objectName + "GenesisPlaneComboBox"
+                        model: [qsTr("Plane A"), qsTr("Plane B"), qsTr("Window")]
+                        currentIndex: editorProject.activeCharacterPlane
+                        onActivated: index => editorProject.activeCharacterPlane = index
+                    }
+                    Label { text: qsTr("Tile palette") }
+                    ComboBox {
+                        objectName: root.objectName + "GenesisTilePaletteComboBox"
+                        model: 4
+                        currentIndex: editorProject.activeCharacterTilePalette
+                        delegate: ItemDelegate {
+                            required property int index
+                            width: parent ? parent.width : implicitWidth
+                            text: qsTr("Palette %1").arg(index)
+                        }
+                        contentItem: Label {
+                            text: qsTr("Palette %1").arg(
+                                      editorProject.activeCharacterTilePalette)
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onActivated: index =>
+                            editorProject.activeCharacterTilePalette = index
+                    }
+                    Label { text: qsTr("Tile attributes") }
+                    RowLayout {
+                        CheckBox {
+                            objectName: root.objectName + "GenesisTileFlipXCheckBox"
+                            text: qsTr("H flip")
+                            checked: editorProject.activeCharacterTileFlipX
+                            onToggled: editorProject.activeCharacterTileFlipX = checked
+                        }
+                        CheckBox {
+                            objectName: root.objectName + "GenesisTileFlipYCheckBox"
+                            text: qsTr("V flip")
+                            checked: editorProject.activeCharacterTileFlipY
+                            onToggled: editorProject.activeCharacterTileFlipY = checked
+                        }
+                    }
+                    Label { text: qsTr("Display priority") }
+                    CheckBox {
+                        objectName: root.objectName + "GenesisTilePriorityCheckBox"
+                        text: qsTr("High")
+                        checked: editorProject.activeCharacterTilePriority
+                        onToggled: editorProject.activeCharacterTilePriority = checked
+                    }
+                }
+
+                CheckBox {
+                    objectName: root.objectName + "GenesisCompositePreviewCheckBox"
+                    text: qsTr("Composite planes and sprites by VDP priority")
+                    checked: editorProject.genesisCompositePreview
+                    onToggled: editorProject.genesisCompositePreview = checked
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Tiling mode edits the selected layer. Composite preview uses the Genesis low/high order for Plane B, Plane A, sprites, and Window. Color index 0 remains transparent for sprites.")
                     wrapMode: Text.WordWrap
                     color: palette.placeholderText
                 }

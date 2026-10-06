@@ -1437,9 +1437,31 @@ void testEditorProjectRecipe(TestContext& test)
                     && genesisRows[7].toMap().value(QStringLiteral("pixels"))
                            .toList()[7].toInt() == 14,
                 "Genesis character editing should retain 4bpp indexes through all 2048 tile slots");
+    genesisProject.setActiveCharacterPlane(1);
+    genesisProject.setActiveCharacterPattern(12);
+    genesisProject.moveCharacterTile(genesisProject.activeCharacterEditor(), 8, 16);
+    genesisProject.setActiveCharacterTilePalette(2);
+    genesisProject.setActiveCharacterTileFlipX(true);
+    genesisProject.setActiveCharacterTilePriority(true);
+    genesisProject.setActiveCharacterPlane(2);
+    genesisProject.setActiveCharacterPattern(13);
+    genesisProject.moveCharacterTile(genesisProject.activeCharacterEditor(), 16, 8);
+    genesisProject.setActiveCharacterTilePalette(1);
+    genesisProject.setActiveCharacterTileFlipY(true);
+    genesisProject.setGenesisCompositePreview(true);
+    const QVariantList genesisMapSlots = genesisProject.characterEditorSlots();
+    test.expect(genesisMapSlots.size() == 3
+                    && genesisMapSlots.at(1).toMap().value(QStringLiteral("plane")).toInt() == 1
+                    && genesisMapSlots.at(1).toMap().value(QStringLiteral("palette")).toInt() == 2
+                    && genesisMapSlots.at(1).toMap().value(QStringLiteral("flipX")).toBool()
+                    && genesisMapSlots.at(1).toMap().value(QStringLiteral("priority")).toBool()
+                    && genesisMapSlots.at(2).toMap().value(QStringLiteral("plane")).toInt() == 2
+                    && genesisMapSlots.at(2).toMap().value(QStringLiteral("flipY")).toBool(),
+                "Genesis character tiling should author Plane A, Plane B, and Window cells with native attributes");
     genesisProject.setActiveSprite(79);
     genesisProject.setActiveSpriteSize(2432);
     genesisProject.setActiveSpritePaletteBank(2);
+    genesisProject.setActiveSpritePriority(true);
     genesisProject.setSpriteDrawingColorIndex(15);
     genesisProject.paintSpritePixel(0, 79, 2432, 31, 23, true);
     const QVariantList genesisSprite = genesisProject.spritePatternPixels(0, 79, 2432);
@@ -1468,15 +1490,45 @@ void testEditorProjectRecipe(TestContext& test)
                     && genesisProject.projectName() == QStringLiteral("Genesis Campaign")
                     && genesisProject.segaGenesisEnabled()
                     && !genesisProject.tms9918aEnabled()
-                    && genesisProject.characterPaletteBank() == 3
+                    && genesisProject.activeCharacterPlane() == 2
+                    && genesisProject.activeCharacterTilePalette() == 1
+                    && genesisProject.activeCharacterTileFlipY()
+                    && genesisProject.genesisCompositePreview()
                     && genesisProject.activeSprite() == 79
                     && genesisProject.activeSpriteSize() == 2432
                     && genesisProject.activeSpritePaletteBank() == 2
+                    && genesisProject.activeSpritePriority()
                     && restoredGenesisRows[7].toMap()
                            .value(QStringLiteral("pixels")).toList()[7].toInt() == 14
                     && restoredGenesisSprite.size() == 768
                     && restoredGenesisSprite[767].toInt() == 15,
                 "Genesis character and sprite data should round-trip through project recipes");
+
+    const bool genesisAssetsExported = genesisProject.exportGenesisCharacterAssets(
+        QUrl::fromLocalFile(genesisDirectory.path()));
+    QFile planeB(genesisDirectory.filePath(
+        QStringLiteral("GENESIS_CAMPAIGN.PLANE_B.MAP")));
+    QFile windowMap(genesisDirectory.filePath(
+        QStringLiteral("GENESIS_CAMPAIGN.WINDOW.MAP")));
+    const bool mapsOpened = planeB.open(QIODevice::ReadOnly)
+        && windowMap.open(QIODevice::ReadOnly);
+    const QByteArray planeBBytes = mapsOpened ? planeB.readAll() : QByteArray{};
+    const QByteArray windowBytes = mapsOpened ? windowMap.readAll() : QByteArray{};
+    const int planeBOffset = (2 * 64 + 1) * 2;
+    const int windowOffset = (1 * 64 + 2) * 2;
+    test.expect(genesisAssetsExported && mapsOpened
+                    && QFileInfo(genesisDirectory.filePath(
+                           QStringLiteral("GENESIS_CAMPAIGN.TILES"))).size() == 65536
+                    && planeBBytes.size() == 4096 && windowBytes.size() == 4096
+                    && static_cast<unsigned char>(planeBBytes.at(planeBOffset)) == 0xc8
+                    && static_cast<unsigned char>(planeBBytes.at(planeBOffset + 1)) == 0x0c
+                    && static_cast<unsigned char>(windowBytes.at(windowOffset)) == 0x30
+                    && static_cast<unsigned char>(windowBytes.at(windowOffset + 1)) == 0x0d
+                    && QFileInfo(genesisDirectory.filePath(
+                           QStringLiteral("GENESIS_CAMPAIGN.PAL"))).size() == 128
+                    && QFileInfo(genesisDirectory.filePath(
+                           QStringLiteral("GENESIS_CAMPAIGN.REG"))).size() == 24,
+                "Genesis Character export should write native big-endian tile words for all three maps");
 
     ImageInputController recipeImage;
     recipeImage.setAutoUpdate(false);
@@ -1573,6 +1625,31 @@ void testEditorProjectRecipe(TestContext& test)
                     && undoneExtractedSecond.at(0).toMap()
                            .value(QStringLiteral("color")).toInt() == 0xf1,
                 "multi-pattern extraction should undo as one character edit");
+
+    ImageInputController genesisExtractionImage;
+    genesisExtractionImage.setAutoUpdate(false);
+    EditorProjectController genesisExtractionProject(&genesisExtractionImage);
+    genesisExtractionProject.configureProjectWithTargets(
+        QStringLiteral("Layer Import"), false, false,
+        QStringList{QStringLiteral("sega-genesis-vdp")});
+    genesisExtractionImage.newScreenImage();
+    genesisExtractionProject.setActiveCharacterPlane(1);
+    const bool genesisExtracted = genesisExtractionProject.extractScreenImagePatterns(
+        0, 0, 2, 1, 20, false);
+    const QVariantList genesisExtractedSlots =
+        genesisExtractionProject.characterEditorSlots();
+    int importedPlaneBCells = 0;
+    for (const QVariant& value : genesisExtractedSlots) {
+        const QVariantMap slot = value.toMap();
+        if (slot.value(QStringLiteral("plane")).toInt() == 1
+            && slot.value(QStringLiteral("loaded")).toBool()
+            && (slot.value(QStringLiteral("patternIndex")).toInt() == 20
+                || slot.value(QStringLiteral("patternIndex")).toInt() == 21)) {
+            ++importedPlaneBCells;
+        }
+    }
+    test.expect(genesisExtracted && importedPlaneBCells == 2,
+                "Genesis Screen Image extraction should place the selected region directly into the active plane map");
 
     EditorProjectController historyProject(&recipeImage);
     historyProject.beginCharacterEdit(0, 0);
@@ -4193,6 +4270,64 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && screenshot.height() >= 500,
                 "fractional-scale offscreen rendering should produce a complete frame");
     screenshot.save(QDir::current().filePath(QStringLiteral("phase6-interface.png")));
+
+    editorProject.configureProjectWithTargets(
+        QStringLiteral("Genesis Sprite UI"), false, false,
+        QStringList{QStringLiteral("sega-genesis-vdp")});
+    controller.setConversionMode(static_cast<int>(
+        retrovdp::core::ConversionMode::Mode5GenesisH40));
+    editorProject.setWorkspaceMode(2);
+    editorProject.setActiveSprite(7);
+    editorProject.setActiveSpriteSize(2432);
+    editorProject.setActiveSprite(0);
+    QObject* genesisSpriteList = nullptr;
+    QObject* genesisSpriteGrid = nullptr;
+    QObject* genesisSpriteTitle = nullptr;
+    const bool genesisUiReady = waitFor([&] {
+        spriteSetView = visiblePane(QStringLiteral("spriteSetView"));
+        genesisSpriteList = visiblePane(QStringLiteral("genesisSpriteList"));
+        genesisSpriteGrid = visiblePane(QStringLiteral("genesisSpriteEntryGrid"));
+        genesisSpriteTitle = visiblePane(QStringLiteral("genesisSpriteListTitle"));
+        return genesisSpriteList != nullptr && genesisSpriteGrid != nullptr
+            && genesisSpriteGrid->property("count").toInt() == 80
+            && genesisSpriteTitle != nullptr
+            && genesisSpriteTitle->property("text").toString().contains(
+                QStringLiteral("80"));
+    });
+    const bool selectedRectangularGenesisSprite = spriteSetView != nullptr
+        && QMetaObject::invokeMethod(spriteSetView, "selectGenesisSprite",
+                                     Q_ARG(QVariant, QVariant(7)));
+    const QVariantList genesisPlacements = editorProject.activeSpritePlacements();
+    test.expect(genesisUiReady
+                    && visiblePane(QStringLiteral("sprite8PatternBank")) == nullptr
+                    && visiblePane(QStringLiteral("sprite16PatternBank")) == nullptr
+                    && selectedRectangularGenesisSprite
+                    && editorProject.activeSprite() == 7
+                    && editorProject.activeSpriteSize() == 2432
+                    && genesisPlacements.at(7).toMap()
+                           .value(QStringLiteral("size")).toInt() == 2432,
+                "Genesis should use one size-aware sprite list and preserve a selected entry's rectangular geometry");
+
+    editorProject.setActiveSpritePriority(true);
+    window->setProperty("workspaceMode", 1);
+    editorProject.setCharacterTilingMode(true);
+    editorProject.setActiveCharacterPlane(1);
+    editorProject.setGenesisCompositePreview(true);
+    test.expect(waitFor([&] {
+                    return exportAction->property("enabled").toBool()
+                        && window->findChild<QObject*>(
+                               QStringLiteral("genesisCharacterExportDialog")) != nullptr
+                        && window->findChild<QObject*>(
+                               QStringLiteral("characterEditorSidePanelGenesisPlaneComboBox")) != nullptr
+                        && window->findChild<QObject*>(
+                               QStringLiteral("characterEditorSidePanelGenesisTilePriorityCheckBox")) != nullptr
+                        && window->findChild<QObject*>(
+                               QStringLiteral("characterEditorSidePanelGenesisCompositePreviewCheckBox")) != nullptr;
+                })
+                    && editorProject.activeCharacterPlane() == 1
+                    && editorProject.genesisCompositePreview()
+                    && editorProject.activeSpritePriority(),
+                "Genesis Character mode should expose layer authoring, priority composition, and native export controls");
 
     appPreferences.setPreviewLayout(0);
     test.expect(waitFor([&] {

@@ -22,6 +22,8 @@ Item {
         return visible
     }
     readonly property int editorSlotCount: visibleEditorSlots.length
+    readonly property bool genesisMode:
+        editorProject.activeTargetInfo.id === "sega-genesis-vdp"
     property bool sprite8Expanded:
         editorProject.activeTargetInfo.spritePerItemSize
         || editorProject.spriteGlobalSize === 8
@@ -30,10 +32,12 @@ Item {
         || editorProject.spriteGlobalSize === 16
     property int observedEditScope: editorProject.editScope
     property int observedGlobalSize: editorProject.spriteGlobalSize
-    readonly property int square8Size:
-        editorProject.activeTargetInfo.id === "sega-genesis-vdp" ? 808 : 8
-    readonly property int square16Size:
-        editorProject.activeTargetInfo.id === "sega-genesis-vdp" ? 1616 : 16
+    readonly property int square8Size: 8
+    readonly property int square16Size: 16
+
+    function selectGenesisSprite(index) {
+        editorProject.activeSprite = index
+    }
 
     function bankExpanded(size) {
         return editorProject.spritePatternWidth(size) === 8
@@ -92,6 +96,19 @@ Item {
         if (index < 0 || index >= colors.length)
             return "#000000"
         return index === 0 ? "#20272e" : colors[index]
+    }
+
+    function genesisPaletteColor(spriteIndex, colorIndex) {
+        if (colorIndex === 0)
+            return "transparent"
+        const placement = root.placements[spriteIndex]
+        const paletteBank = placement ? placement.palette : 0
+        const paletteIndex = paletteBank * 16 + colorIndex
+        const colors = imageInput.paletteColors
+        if (paletteIndex >= 0 && paletteIndex < colors.length)
+            return colors[paletteIndex]
+        const fallback = editorProject.characterPaletteColors
+        return colorIndex < fallback.length ? fallback[colorIndex] : "#000000"
     }
 
     component SpriteBank: Item {
@@ -239,6 +256,161 @@ Item {
                 TapHandler {
                     onTapped: editorProject.selectSpritePattern(
                                   spriteCell.index, bank.spriteSize)
+                }
+            }
+        }
+    }
+
+    component GenesisSpriteList: Item {
+        id: genesisList
+
+        Rectangle {
+            id: genesisHeader
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 30
+            color: "#315f82"
+            border.width: 1
+            border.color: "#8fd0ff"
+            radius: 3
+
+            Label {
+                id: genesisListTitle
+                objectName: "genesisSpriteListTitle"
+                anchors.left: parent.left
+                anchors.leftMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Genesis sprite entries · %1")
+                      .arg(editorProject.spritePatternsPerSet)
+                color: "white"
+                font.weight: Font.DemiBold
+            }
+
+            Label {
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Each entry keeps its own size")
+                color: "#d9efff"
+                font.pixelSize: 10
+            }
+        }
+
+        GridView {
+            id: genesisGrid
+            objectName: "genesisSpriteEntryGrid"
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: genesisHeader.bottom
+            anchors.topMargin: 3
+            anchors.bottom: parent.bottom
+            model: editorProject.spritePatternsPerSet
+            clip: true
+            cellWidth: Math.max(76, Math.floor(width / 10))
+            cellHeight: 86
+            ScrollBar.vertical: ScrollBar {}
+
+            delegate: Rectangle {
+                id: genesisCell
+                required property int index
+                readonly property var placement:
+                    root.placements.length > index ? root.placements[index] : null
+                readonly property int spriteSize: placement ? placement.size : 808
+                readonly property int pixelWidth:
+                    editorProject.spritePatternWidth(spriteSize)
+                readonly property int pixelHeight:
+                    editorProject.spritePatternHeight(spriteSize)
+                readonly property bool active:
+                    index === editorProject.activeSprite
+                readonly property var pixels: {
+                    const revision = editorProject.spriteRevision
+                    return editorProject.spritePatternPixels(
+                        editorProject.activeSpriteSet, index, spriteSize)
+                }
+                width: genesisGrid.cellWidth - 3
+                height: genesisGrid.cellHeight - 3
+                color: active ? "#315f82" : "#1b2229"
+                border.width: active ? 2 : 1
+                border.color: active ? "#8fd0ff" : "#53606d"
+                radius: 3
+                Accessible.role: Accessible.Button
+                Accessible.name: qsTr("Sprite %1, %2 by %3 pixels")
+                                 .arg(index).arg(pixelWidth).arg(pixelHeight)
+
+                Canvas {
+                    id: genesisThumbnail
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: sizeLabel.top
+                    anchors.margins: 5
+                    antialiasing: false
+                    property int observedRevision: editorProject.spriteRevision
+                    property int observedPalette:
+                        genesisCell.placement ? genesisCell.placement.palette : 0
+                    property int observedSize: genesisCell.spriteSize
+                    onObservedRevisionChanged: requestPaint()
+                    onObservedPaletteChanged: requestPaint()
+                    onObservedSizeChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+
+                    onPaint: {
+                        const context = getContext("2d")
+                        context.clearRect(0, 0, width, height)
+                        const scale = Math.min(width / genesisCell.pixelWidth,
+                                               height / genesisCell.pixelHeight)
+                        const drawWidth = genesisCell.pixelWidth * scale
+                        const drawHeight = genesisCell.pixelHeight * scale
+                        const offsetX = (width - drawWidth) / 2
+                        const offsetY = (height - drawHeight) / 2
+                        for (let pixel = 0;
+                             pixel < genesisCell.pixelWidth
+                                 * genesisCell.pixelHeight; ++pixel) {
+                            const value = genesisCell.pixels.length > pixel
+                                          ? genesisCell.pixels[pixel] : 0
+                            if (value === 0)
+                                continue
+                            context.fillStyle = root.genesisPaletteColor(
+                                genesisCell.index, value)
+                            const column = pixel % genesisCell.pixelWidth
+                            const row = Math.floor(pixel / genesisCell.pixelWidth)
+                            context.fillRect(offsetX + column * scale,
+                                             offsetY + row * scale,
+                                             Math.ceil(scale), Math.ceil(scale))
+                        }
+                    }
+                }
+
+                Label {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.margins: 3
+                    padding: 1
+                    text: genesisCell.index.toString(16).toUpperCase()
+                                             .padStart(2, "0")
+                    color: "white"
+                    font.pixelSize: 10
+                    background: Rectangle { color: "#99000000"; radius: 1 }
+                }
+
+                Label {
+                    id: sizeLabel
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 19
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: qsTr("%1×%2")
+                          .arg(genesisCell.pixelWidth).arg(genesisCell.pixelHeight)
+                    color: genesisCell.active ? "white" : palette.placeholderText
+                    font.pixelSize: 10
+                }
+
+                TapHandler {
+                    onTapped: root.selectGenesisSprite(genesisCell.index)
                 }
             }
         }
@@ -433,6 +605,7 @@ Item {
         }
 
         SplitView {
+            visible: !root.genesisMode
             Layout.fillWidth: true
             Layout.fillHeight: true
             orientation: Qt.Vertical
@@ -459,6 +632,15 @@ Item {
                        .arg(editorProject.spritePatternWidth(16))
                        .arg(editorProject.spritePatternHeight(16))
                        .arg(editorProject.spritePatternsPerSet)
+            }
+        }
+
+        Loader {
+            active: root.genesisMode
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            sourceComponent: GenesisSpriteList {
+                objectName: "genesisSpriteList"
             }
         }
     }

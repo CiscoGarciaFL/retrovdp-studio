@@ -217,7 +217,11 @@ Item {
                     implicitWidth: 26
                     implicitHeight: 26
                     text: "+"
-                    enabled: editorTray.editorCount < 768
+                    enabled: root.allEditorSlots.length
+                             < (editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+                                ? editorProject.characterMapColumns
+                                  * editorProject.characterMapRows * 3
+                                : 768)
                     Accessible.name: editorProject.characterTilingMode
                                      ? qsTr("Add empty tile")
                                      : qsTr("Add empty pattern editor")
