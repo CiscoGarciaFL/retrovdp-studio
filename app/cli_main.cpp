@@ -335,12 +335,12 @@ QJsonObject mediaTimelineJson(const media::MediaTimeline& timeline)
             {QStringLiteral("averageFrameRate"), rationalText(stream.averageFrameRate)},
             {QStringLiteral("nativeFrameRate"), rationalText(stream.nativeFrameRate)},
             {QStringLiteral("timeBase"), rationalText(stream.timeBase)},
-            {QStringLiteral("startUs"), stream.startMicroseconds},
-            {QStringLiteral("durationUs"), stream.durationMicroseconds},
+            {QStringLiteral("startUs"), static_cast<qint64>(stream.startMicroseconds)},
+            {QStringLiteral("durationUs"), static_cast<qint64>(stream.durationMicroseconds)},
             {QStringLiteral("default"), stream.defaultStream},
         };
         if (stream.frameCount) {
-            value.insert(QStringLiteral("frameCount"), *stream.frameCount);
+            value.insert(QStringLiteral("frameCount"), static_cast<qint64>(*stream.frameCount));
         }
         videoStreams.push_back(value);
     }
@@ -354,8 +354,8 @@ QJsonObject mediaTimelineJson(const media::MediaTimeline& timeline)
             {QStringLiteral("channelLayout"), QString::fromStdString(stream.channelLayout)},
             {QStringLiteral("language"), QString::fromStdString(stream.language)},
             {QStringLiteral("timeBase"), rationalText(stream.timeBase)},
-            {QStringLiteral("startUs"), stream.startMicroseconds},
-            {QStringLiteral("durationUs"), stream.durationMicroseconds},
+            {QStringLiteral("startUs"), static_cast<qint64>(stream.startMicroseconds)},
+            {QStringLiteral("durationUs"), static_cast<qint64>(stream.durationMicroseconds)},
             {QStringLiteral("default"), stream.defaultStream},
         });
     }
@@ -363,8 +363,8 @@ QJsonObject mediaTimelineJson(const media::MediaTimeline& timeline)
     for (const auto& chapter : timeline.chapters) {
         chapters.push_back(QJsonObject{
             {QStringLiteral("id"), chapter.id},
-            {QStringLiteral("startUs"), chapter.startMicroseconds},
-            {QStringLiteral("endUs"), chapter.endMicroseconds},
+            {QStringLiteral("startUs"), static_cast<qint64>(chapter.startMicroseconds)},
+            {QStringLiteral("endUs"), static_cast<qint64>(chapter.endMicroseconds)},
             {QStringLiteral("title"), QString::fromStdString(chapter.title)},
         });
     }
@@ -372,7 +372,7 @@ QJsonObject mediaTimelineJson(const media::MediaTimeline& timeline)
         {QStringLiteral("timelineId"), QString::fromStdString(timeline.id.value())},
         {QStringLiteral("source"), QString::fromStdString(timeline.segments.front().sourceLocator)},
         {QStringLiteral("format"), QString::fromStdString(timeline.formatName)},
-        {QStringLiteral("durationUs"), timeline.durationMicroseconds},
+        {QStringLiteral("durationUs"), static_cast<qint64>(timeline.durationMicroseconds)},
         {QStringLiteral("videoStreams"), videoStreams},
         {QStringLiteral("audioStreams"), audioStreams},
         {QStringLiteral("chapters"), chapters},
