@@ -155,6 +155,24 @@ int main(int argc, char* argv[])
     MediaClipController outputController;
     const bool outputOpened = outputController.openClipUrl(
         QUrl::fromLocalFile(batchConverted.monitorManifestPath));
+    if (!batchConverted) {
+        std::cerr << "conversion serial failure: "
+                  << batchConverted.errorCode.toStdString() << ": "
+                  << batchConverted.error.toStdString() << '\n';
+    } else if (!outputOpened) {
+        std::cerr << "conversion output monitor failure: "
+                  << outputController.errorMessage().toStdString() << '\n';
+    } else {
+        std::cerr << "conversion serial outputs: run="
+                  << QFileInfo::exists(batchConverted.runManifestPath)
+                  << " preview="
+                  << QFileInfo::exists(QDir(conversionDestination).filePath(
+                         QStringLiteral("previews/frame_000001.png")))
+                  << " native="
+                  << QFileInfo::exists(QDir(conversionDestination).filePath(
+                         QStringLiteral("native/frame_000001/frame_000001.TIAP")))
+                  << " frames=" << outputController.frameCount() << '\n';
+    }
     test.expect(batchConverted && batchConverted.frameCount == 2
                     && QFileInfo::exists(batchConverted.runManifestPath)
                     && QFileInfo::exists(QDir(conversionDestination).filePath(
@@ -176,6 +194,11 @@ int main(int argc, char* argv[])
         .destinationDirectory = parallelDestination,
         .conversionWorkers = 2,
     });
+    if (!parallelConverted) {
+        std::cerr << "conversion parallel failure: "
+                  << parallelConverted.errorCode.toStdString() << ": "
+                  << parallelConverted.error.toStdString() << '\n';
+    }
     const QByteArray serialNative = [] (const QString& path) {
         QFile file(path);
         return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};

@@ -191,6 +191,13 @@ int main(int argc, char* argv[])
         QStringLiteral("--json"),
     });
     const QJsonObject mediaConversionJson = jsonResult(mediaConversion);
+    if (!mediaConversion.completed || mediaConversion.exitCode != 0
+        || mediaConversionJson.value(QStringLiteral("status"))
+               == QStringLiteral("error")) {
+        std::cerr << "CLI media conversion failure: exit=" << mediaConversion.exitCode
+                  << " stdout=" << mediaConversion.standardOutput.toStdString()
+                  << " stderr=" << mediaConversion.standardError.toStdString() << '\n';
+    }
     test.expect(mediaConversion.completed && mediaConversion.exitCode == 0
                     && mediaConversionJson.value(QStringLiteral("kind"))
                         == QStringLiteral("media-conversion")
