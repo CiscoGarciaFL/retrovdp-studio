@@ -1,4 +1,9 @@
 #include "ConversionPipeline.hpp"
+#include "ClipMapAdapter.hpp"
+#include "MediaBatchConversion.hpp"
+#include "MediaExtraction.hpp"
+#include "MediaProbe.hpp"
+#include "MediaToolDiscovery.hpp"
 
 #include "retrovdp/core/Dithering.hpp"
 #include "retrovdp/core/TargetProfile.hpp"
@@ -22,7 +27,9 @@
 
 #include <array>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -39,6 +46,7 @@ enum class ExitCode : int {
     Conversion = 4,
     Export = 5,
     Write = 6,
+    Dependency = 7,
 };
 
 struct FormatChoice {
@@ -295,6 +303,118 @@ QString firstConversionError(const core::ConversionResult& result)
     return QStringLiteral("Conversion failed without an error diagnostic.");
 }
 
+QJsonObject mediaExecutableJson(const appsupport::MediaExecutableInfo& info)
+{
+    QJsonObject result{
+        {QStringLiteral("available"), info.available},
+        {QStringLiteral("path"), info.resolvedPath},
+        {QStringLiteral("version"), info.version},
+    };
+    if (!info.requestedPath.isEmpty()) {
+        result.insert(QStringLiteral("requestedPath"), info.requestedPath);
+    }
+    if (!info.error.isEmpty()) result.insert(QStringLiteral("error"), info.error);
+    return result;
+}
+
+QString rationalText(media::Rational value)
+{
+    return QStringLiteral("%1/%2").arg(value.numerator).arg(value.denominator);
+}
+
+QJsonObject mediaTimelineJson(const media::MediaTimeline& timeline)
+{
+    QJsonArray videoStreams;
+    for (const auto& stream : timeline.videoStreams) {
+        QJsonObject value{
+            {QStringLiteral("index"), stream.index},
+            {QStringLiteral("codec"), QString::fromStdString(stream.codecName)},
+            {QStringLiteral("width"), static_cast<qint64>(stream.width)},
+            {QStringLiteral("height"), static_cast<qint64>(stream.height)},
+            {QStringLiteral("pixelFormat"), QString::fromStdString(stream.pixelFormat)},
+            {QStringLiteral("averageFrameRate"), rationalText(stream.averageFrameRate)},
+            {QStringLiteral("nativeFrameRate"), rationalText(stream.nativeFrameRate)},
+            {QStringLiteral("timeBase"), rationalText(stream.timeBase)},
+            {QStringLiteral("startUs"), stream.startMicroseconds},
+            {QStringLiteral("durationUs"), stream.durationMicroseconds},
+            {QStringLiteral("default"), stream.defaultStream},
+        };
+        if (stream.frameCount) {
+            value.insert(QStringLiteral("frameCount"), *stream.frameCount);
+        }
+        videoStreams.push_back(value);
+    }
+    QJsonArray audioStreams;
+    for (const auto& stream : timeline.audioStreams) {
+        audioStreams.push_back(QJsonObject{
+            {QStringLiteral("index"), stream.index},
+            {QStringLiteral("codec"), QString::fromStdString(stream.codecName)},
+            {QStringLiteral("sampleRate"), static_cast<qint64>(stream.sampleRate)},
+            {QStringLiteral("channels"), static_cast<qint64>(stream.channels)},
+            {QStringLiteral("channelLayout"), QString::fromStdString(stream.channelLayout)},
+            {QStringLiteral("language"), QString::fromStdString(stream.language)},
+            {QStringLiteral("timeBase"), rationalText(stream.timeBase)},
+            {QStringLiteral("startUs"), stream.startMicroseconds},
+            {QStringLiteral("durationUs"), stream.durationMicroseconds},
+            {QStringLiteral("default"), stream.defaultStream},
+        });
+    }
+    QJsonArray chapters;
+    for (const auto& chapter : timeline.chapters) {
+        chapters.push_back(QJsonObject{
+            {QStringLiteral("id"), chapter.id},
+            {QStringLiteral("startUs"), chapter.startMicroseconds},
+            {QStringLiteral("endUs"), chapter.endMicroseconds},
+            {QStringLiteral("title"), QString::fromStdString(chapter.title)},
+        });
+    }
+    return {
+        {QStringLiteral("timelineId"), QString::fromStdString(timeline.id.value())},
+        {QStringLiteral("source"), QString::fromStdString(timeline.segments.front().sourceLocator)},
+        {QStringLiteral("format"), QString::fromStdString(timeline.formatName)},
+        {QStringLiteral("durationUs"), timeline.durationMicroseconds},
+        {QStringLiteral("videoStreams"), videoStreams},
+        {QStringLiteral("audioStreams"), audioStreams},
+        {QStringLiteral("chapters"), chapters},
+    };
+}
+
+std::optional<std::int64_t> secondsOption(const QString& text)
+{
+    if (text.trimmed().isEmpty()) return std::nullopt;
+    bool ok = false;
+    const double value = text.toDouble(&ok);
+    if (!ok || !std::isfinite(value) || value < 0.0
+        || value > static_cast<double>(std::numeric_limits<std::int64_t>::max()) / 1'000'000.0) {
+        return std::nullopt;
+    }
+    return static_cast<std::int64_t>(std::llround(value * 1'000'000.0));
+}
+
+std::optional<media::Rational> frameRateOption(const QString& text)
+{
+    if (text.trimmed().isEmpty()) return media::Rational{};
+    const QStringList parts = text.split(QLatin1Char('/'));
+    media::Rational result;
+    if (parts.size() == 2) {
+        bool numeratorOk = false;
+        bool denominatorOk = false;
+        result.numerator = parts[0].toLongLong(&numeratorOk);
+        result.denominator = parts[1].toLongLong(&denominatorOk);
+        if (!numeratorOk || !denominatorOk) return std::nullopt;
+    } else if (parts.size() == 1) {
+        bool ok = false;
+        const double value = text.toDouble(&ok);
+        if (!ok || !std::isfinite(value) || value <= 0.0) return std::nullopt;
+        result = {static_cast<std::int64_t>(std::llround(value * 1'000'000.0)),
+                  1'000'000};
+    } else {
+        return std::nullopt;
+    }
+    if (!media::isValidPositiveRational(result)) return std::nullopt;
+    return media::normalizedRational(result);
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
@@ -343,8 +463,90 @@ int main(int argc, char* argv[])
         QStringLiteral("overwrite"), QStringLiteral("Replace existing output files."));
     const QCommandLineOption jsonOption(
         QStringLiteral("json"), QStringLiteral("Write one machine-readable JSON result."));
+    const QCommandLineOption checkMediaToolsOption(
+        QStringLiteral("check-media-tools"),
+        QStringLiteral("Locate and validate FFmpeg and FFprobe, then exit."));
+    const QCommandLineOption ffmpegPathOption(
+        QStringLiteral("ffmpeg-path"),
+        QStringLiteral("Explicit FFmpeg executable used by the media-tool check."),
+        QStringLiteral("file"));
+    const QCommandLineOption ffprobePathOption(
+        QStringLiteral("ffprobe-path"),
+        QStringLiteral("Explicit FFprobe executable used by the media-tool check."),
+        QStringLiteral("file"));
+    const QCommandLineOption probeMediaOption(
+        QStringLiteral("probe-media"),
+        QStringLiteral("Inspect one local video/audio file with FFprobe, then exit."),
+        QStringLiteral("file"));
+    const QCommandLineOption extractMediaOption(
+        QStringLiteral("extract-media"),
+        QStringLiteral("Create a frame/audio clip package from one local media file."),
+        QStringLiteral("file"));
+    const QCommandLineOption convertMediaClipOption(
+        QStringLiteral("convert-media-clip"),
+        QStringLiteral("Convert every frame in a clip package using --recipe."),
+        QStringLiteral("clip.json"));
+    const QCommandLineOption conversionWorkersOption(
+        QStringLiteral("conversion-workers"),
+        QStringLiteral("Parallel frame-conversion workers: auto or 1 through the available logical processor count."),
+        QStringLiteral("count"), QStringLiteral("auto"));
+    const QCommandLineOption convertClipMapOption(
+        QStringLiteral("convert-clip-map"),
+        QStringLiteral("Validate and convert a clip mapping document."),
+        QStringLiteral("file"));
+    const QCommandLineOption clipMapInputFormatOption(
+        QStringLiteral("clip-map-input-format"),
+        QStringLiteral("Clip-map input: auto, json, csv, tsv, daphne, hypseus, or framefile."),
+        QStringLiteral("format"), QStringLiteral("auto"));
+    const QCommandLineOption clipMapOutputFormatOption(
+        QStringLiteral("clip-map-output-format"),
+        QStringLiteral("Clip-map output: auto, json, csv, tsv, daphne, hypseus, or framefile."),
+        QStringLiteral("format"), QStringLiteral("auto"));
+    const QCommandLineOption mappingFpsOption(
+        QStringLiteral("mapping-fps"),
+        QStringLiteral("Frame rate to attach when importing a format that does not declare FPS."),
+        QStringLiteral("rate"));
+    const QCommandLineOption startOption(
+        QStringLiteral("start"), QStringLiteral("Extraction start in seconds."),
+        QStringLiteral("seconds"), QStringLiteral("0"));
+    const QCommandLineOption durationOption(
+        QStringLiteral("duration"), QStringLiteral("Extraction duration in seconds."),
+        QStringLiteral("seconds"));
+    const QCommandLineOption fpsOption(
+        QStringLiteral("fps"),
+        QStringLiteral("Extraction frame rate as decimal or rational; defaults to the source rate."),
+        QStringLiteral("rate"));
+    const QCommandLineOption extractionWidthOption(
+        QStringLiteral("extract-width"), QStringLiteral("Extraction canvas width."),
+        QStringLiteral("pixels"));
+    const QCommandLineOption extractionHeightOption(
+        QStringLiteral("extract-height"), QStringLiteral("Extraction canvas height."),
+        QStringLiteral("pixels"));
+    const QCommandLineOption extractionSizingOption(
+        QStringLiteral("extract-sizing"),
+        QStringLiteral("Extraction framing: native, fit, fill, or stretch."),
+        QStringLiteral("mode"), QStringLiteral("native"));
+    const QCommandLineOption audioOption(
+        QStringLiteral("audio"),
+        QStringLiteral("Optional extracted audio: none, wav, flac, or ogg."),
+        QStringLiteral("format"), QStringLiteral("none"));
+    const QCommandLineOption videoStreamOption(
+        QStringLiteral("video-stream"), QStringLiteral("Global FFprobe video stream index."),
+        QStringLiteral("index"));
+    const QCommandLineOption audioStreamOption(
+        QStringLiteral("audio-stream"), QStringLiteral("Global FFprobe audio stream index."),
+        QStringLiteral("index"));
     parser.addOptions({inputOption, recipeOption, outputOption, targetOption, modeOption,
-                       presetOption, formatOption, baseNameOption, overwriteOption, jsonOption});
+                       presetOption, formatOption, baseNameOption, overwriteOption, jsonOption,
+                       checkMediaToolsOption, ffmpegPathOption, ffprobePathOption,
+                       probeMediaOption, extractMediaOption, convertMediaClipOption,
+                       conversionWorkersOption,
+                       convertClipMapOption, clipMapInputFormatOption,
+                       clipMapOutputFormatOption, mappingFpsOption,
+                       startOption, durationOption,
+                       fpsOption, extractionWidthOption, extractionHeightOption,
+                       extractionSizingOption, audioOption, videoStreamOption,
+                       audioStreamOption});
 
     const QStringList arguments = application.arguments();
     const bool wantsJson = arguments.contains(QStringLiteral("--json"));
@@ -359,6 +561,318 @@ int main(int argc, char* argv[])
     if (parser.isSet(versionOption)) {
         QTextStream(stdout) << application.applicationName() << ' '
                             << application.applicationVersion() << '\n';
+        return static_cast<int>(ExitCode::Success);
+    }
+    if (parser.isSet(checkMediaToolsOption)) {
+        const auto mediaTools = appsupport::probeMediaTools(
+            parser.value(ffmpegPathOption), parser.value(ffprobePathOption));
+        const QJsonObject details{
+            {QStringLiteral("ffmpeg"), mediaExecutableJson(mediaTools.ffmpeg)},
+            {QStringLiteral("ffprobe"), mediaExecutableJson(mediaTools.ffprobe)},
+        };
+        if (!mediaTools.ready()) {
+            return reportFailure(
+                wantsJson, ExitCode::Dependency,
+                QStringLiteral("media-tools-unavailable"),
+                QStringLiteral(
+                    "FFmpeg and FFprobe are required for media work. See docs/FFMPEG_SETUP.md."),
+                details);
+        }
+        if (wantsJson) {
+            QJsonObject result = details;
+            result.insert(QStringLiteral("status"), QStringLiteral("ok"));
+            QTextStream(stdout) << QJsonDocument(result).toJson(QJsonDocument::Compact)
+                                << '\n';
+        } else {
+            QTextStream(stdout)
+                << "FFmpeg media tools are ready.\n"
+                << mediaTools.ffmpeg.version << '\n'
+                << "  " << mediaTools.ffmpeg.resolvedPath << '\n'
+                << mediaTools.ffprobe.version << '\n'
+                << "  " << mediaTools.ffprobe.resolvedPath << '\n';
+        }
+        return static_cast<int>(ExitCode::Success);
+    }
+    if (parser.isSet(probeMediaOption)) {
+        const auto ffprobe = appsupport::probeMediaExecutable(
+            QStringLiteral("ffprobe"), parser.value(ffprobePathOption));
+        if (!ffprobe.available) {
+            return reportFailure(
+                wantsJson, ExitCode::Dependency,
+                QStringLiteral("ffprobe-unavailable"), ffprobe.error,
+                {{QStringLiteral("ffprobe"), mediaExecutableJson(ffprobe)}});
+        }
+        const auto probed = appsupport::probeMediaFile(
+            parser.value(probeMediaOption), ffprobe.resolvedPath);
+        if (!probed) {
+            return reportFailure(wantsJson, ExitCode::Input,
+                                 probed.errorCode, probed.error);
+        }
+        const QJsonObject timeline = mediaTimelineJson(*probed.timeline);
+        if (wantsJson) {
+            QJsonObject result = timeline;
+            result.insert(QStringLiteral("status"), QStringLiteral("ok"));
+            result.insert(QStringLiteral("kind"), QStringLiteral("media-probe"));
+            result.insert(QStringLiteral("ffprobe"), mediaExecutableJson(ffprobe));
+            QTextStream(stdout) << QJsonDocument(result).toJson(QJsonDocument::Compact)
+                                << '\n';
+        } else {
+            QTextStream(stdout)
+                << "Media source: " << timeline.value(QStringLiteral("source")).toString() << '\n'
+                << "Format: " << timeline.value(QStringLiteral("format")).toString() << '\n'
+                << "Duration: " << probed.timeline->durationMicroseconds << " us\n"
+                << "Video streams: " << probed.timeline->videoStreams.size() << '\n'
+                << "Audio streams: " << probed.timeline->audioStreams.size() << '\n'
+                << "Chapters: " << probed.timeline->chapters.size() << '\n';
+        }
+        return static_cast<int>(ExitCode::Success);
+    }
+    if (parser.isSet(extractMediaOption)) {
+        const QString destination = parser.value(outputOption);
+        if (destination.isEmpty()) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("missing-required-option"),
+                                 QStringLiteral("--output is required for media extraction."));
+        }
+        const auto tools = appsupport::probeMediaTools(
+            parser.value(ffmpegPathOption), parser.value(ffprobePathOption));
+        if (!tools.ready()) {
+            return reportFailure(
+                wantsJson, ExitCode::Dependency,
+                QStringLiteral("media-tools-unavailable"),
+                QStringLiteral("FFmpeg and FFprobe are required for media extraction."),
+                {{QStringLiteral("ffmpeg"), mediaExecutableJson(tools.ffmpeg)},
+                 {QStringLiteral("ffprobe"), mediaExecutableJson(tools.ffprobe)}});
+        }
+        const QString sourcePath = parser.value(extractMediaOption);
+        const auto probed = appsupport::probeMediaFile(sourcePath, tools.ffprobe.resolvedPath);
+        if (!probed) {
+            return reportFailure(wantsJson, ExitCode::Input,
+                                 probed.errorCode, probed.error);
+        }
+        const auto start = secondsOption(parser.value(startOption));
+        const auto duration = parser.isSet(durationOption)
+            ? secondsOption(parser.value(durationOption))
+            : std::optional<std::int64_t>{};
+        const auto fps = frameRateOption(parser.value(fpsOption));
+        if (!start || (parser.isSet(durationOption) && (!duration || *duration == 0))
+            || !fps) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("invalid-media-range"),
+                                 QStringLiteral("Start, duration, or FPS is invalid."));
+        }
+        bool widthOk = false;
+        bool heightOk = false;
+        const int width = parser.value(extractionWidthOption).toInt(&widthOk);
+        const int height = parser.value(extractionHeightOption).toInt(&heightOk);
+        const QString sizingText = parser.value(extractionSizingOption).toLower();
+        appsupport::ExtractionSizingMode sizing;
+        if (sizingText == QStringLiteral("native")) {
+            sizing = appsupport::ExtractionSizingMode::Native;
+        } else if (sizingText == QStringLiteral("fit")) {
+            sizing = appsupport::ExtractionSizingMode::Fit;
+        } else if (sizingText == QStringLiteral("fill")) {
+            sizing = appsupport::ExtractionSizingMode::Fill;
+        } else if (sizingText == QStringLiteral("stretch")) {
+            sizing = appsupport::ExtractionSizingMode::Stretch;
+        } else {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("invalid-extraction-sizing"),
+                                 QStringLiteral("Unknown extraction sizing mode: %1").arg(sizingText));
+        }
+        if (sizing != appsupport::ExtractionSizingMode::Native
+            && (!widthOk || !heightOk || width <= 0 || height <= 0)) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("invalid-extraction-size"),
+                                 QStringLiteral("Scaled extraction requires positive width and height."));
+        }
+        const QString audioText = parser.value(audioOption).toLower();
+        appsupport::AudioExtractionFormat audioFormat;
+        if (audioText == QStringLiteral("none")) {
+            audioFormat = appsupport::AudioExtractionFormat::None;
+        } else if (audioText == QStringLiteral("wav")) {
+            audioFormat = appsupport::AudioExtractionFormat::Wav;
+        } else if (audioText == QStringLiteral("flac")) {
+            audioFormat = appsupport::AudioExtractionFormat::Flac;
+        } else if (audioText == QStringLiteral("ogg")) {
+            audioFormat = appsupport::AudioExtractionFormat::OggVorbis;
+        } else {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("invalid-audio-format"),
+                                 QStringLiteral("Unknown extraction audio format: %1").arg(audioText));
+        }
+        bool videoIndexOk = false;
+        const int videoIndex = parser.value(videoStreamOption).toInt(&videoIndexOk);
+        bool audioIndexOk = false;
+        const int audioIndex = parser.value(audioStreamOption).toInt(&audioIndexOk);
+        if ((parser.isSet(videoStreamOption) && (!videoIndexOk || videoIndex < 0))
+            || (parser.isSet(audioStreamOption) && (!audioIndexOk || audioIndex < 0))) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("invalid-media-stream"),
+                                 QStringLiteral("Media stream indexes must be non-negative integers."));
+        }
+        const appsupport::MediaExtractionRequest request{
+            .sourcePath = sourcePath,
+            .destinationDirectory = destination,
+            .ffmpegExecutable = tools.ffmpeg.resolvedPath,
+            .timeline = &*probed.timeline,
+            .startMicroseconds = *start,
+            .durationMicroseconds = duration,
+            .framesPerSecond = *fps,
+            .videoStreamIndex = parser.isSet(videoStreamOption) && videoIndexOk ? videoIndex : -1,
+            .audioStreamIndex = parser.isSet(audioStreamOption) && audioIndexOk
+                ? std::optional<int>(audioIndex) : std::optional<int>{},
+            .sizingMode = sizing,
+            .outputWidth = static_cast<std::uint32_t>(std::max(0, width)),
+            .outputHeight = static_cast<std::uint32_t>(std::max(0, height)),
+            .audioFormat = audioFormat,
+        };
+        const auto extracted = appsupport::extractMediaClip(request);
+        if (!extracted) {
+            const ExitCode code = extracted.errorCode == QStringLiteral("extract-output-exists")
+                ? ExitCode::Write : ExitCode::Conversion;
+            return reportFailure(wantsJson, code, extracted.errorCode, extracted.error);
+        }
+        if (wantsJson) {
+            const QJsonObject result{
+                {QStringLiteral("status"), QStringLiteral("ok")},
+                {QStringLiteral("kind"), QStringLiteral("media-extraction")},
+                {QStringLiteral("output"), extracted.outputDirectory},
+                {QStringLiteral("manifest"), extracted.manifestPath},
+                {QStringLiteral("audio"), extracted.audioPath},
+                {QStringLiteral("frames"), static_cast<qint64>(extracted.frameCount)},
+            };
+            QTextStream(stdout) << QJsonDocument(result).toJson(QJsonDocument::Compact)
+                                << '\n';
+        } else {
+            QTextStream(stdout) << "Extracted " << extracted.frameCount
+                                << " frames to " << extracted.outputDirectory << '\n'
+                                << "Manifest: " << extracted.manifestPath << '\n';
+            if (!extracted.audioPath.isEmpty()) {
+                QTextStream(stdout) << "Audio: " << extracted.audioPath << '\n';
+            }
+        }
+        return static_cast<int>(ExitCode::Success);
+    }
+    if (parser.isSet(convertMediaClipOption)) {
+        if (parser.value(recipeOption).isEmpty() || parser.value(outputOption).isEmpty()) {
+            return reportFailure(
+                wantsJson, ExitCode::Usage, QStringLiteral("missing-required-option"),
+                QStringLiteral("--recipe and --output are required for clip conversion."));
+        }
+        int conversionWorkers = 0;
+        const QString workerText = parser.value(conversionWorkersOption).trimmed().toLower();
+        if (workerText != QStringLiteral("auto")) {
+            bool workersOk = false;
+            conversionWorkers = workerText.toInt(&workersOk);
+            if (!workersOk || conversionWorkers < 1
+                || conversionWorkers > appsupport::availableConversionWorkers()) {
+                return reportFailure(
+                    wantsJson, ExitCode::Usage,
+                    QStringLiteral("invalid-conversion-workers"),
+                    QStringLiteral("--conversion-workers must be auto or an integer from 1 through %1.")
+                        .arg(appsupport::availableConversionWorkers()));
+            }
+        }
+        const appsupport::MediaBatchConversionRequest request{
+            .clipManifestPath = parser.value(convertMediaClipOption),
+            .recipePath = parser.value(recipeOption),
+            .destinationDirectory = parser.value(outputOption),
+            .conversionWorkers = conversionWorkers,
+        };
+        const auto converted = appsupport::convertMediaClip(request);
+        if (!converted) {
+            ExitCode code = ExitCode::Conversion;
+            if (converted.errorCode == QStringLiteral("conversion-output-exists")
+                || converted.errorCode.contains(QStringLiteral("write"))
+                || converted.errorCode.contains(QStringLiteral("commit"))) {
+                code = ExitCode::Write;
+            } else if (converted.errorCode.startsWith(QStringLiteral("recipe-"))) {
+                code = ExitCode::Usage;
+            } else if (converted.errorCode.contains(QStringLiteral("export"))) {
+                code = ExitCode::Export;
+            }
+            return reportFailure(wantsJson, code,
+                                 converted.errorCode, converted.error);
+        }
+        if (wantsJson) {
+            const QJsonObject result{
+                {QStringLiteral("status"), QStringLiteral("ok")},
+                {QStringLiteral("kind"), QStringLiteral("media-conversion")},
+                {QStringLiteral("output"), converted.outputDirectory},
+                {QStringLiteral("runManifest"), converted.runManifestPath},
+                {QStringLiteral("monitorManifest"), converted.monitorManifestPath},
+                {QStringLiteral("frames"), static_cast<qint64>(converted.frameCount)},
+                {QStringLiteral("workers"), converted.workersUsed},
+            };
+            QTextStream(stdout) << QJsonDocument(result).toJson(QJsonDocument::Compact)
+                                << '\n';
+        } else {
+            QTextStream(stdout) << "Converted " << converted.frameCount
+                                << " clip frames with " << converted.workersUsed
+                                << " worker(s) to " << converted.outputDirectory << '\n'
+                                << "Run manifest: " << converted.runManifestPath << '\n'
+                                << "Output monitor: " << converted.monitorManifestPath << '\n';
+        }
+        return static_cast<int>(ExitCode::Success);
+    }
+    if (parser.isSet(convertClipMapOption)) {
+        if (parser.value(outputOption).isEmpty()) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("missing-required-option"),
+                                 QStringLiteral("--output is required for clip-map conversion."));
+        }
+        const auto inputFormat = appsupport::clipMapFormat(
+            parser.value(clipMapInputFormatOption));
+        const auto outputFormat = appsupport::clipMapFormat(
+            parser.value(clipMapOutputFormatOption));
+        if (!inputFormat || !outputFormat) {
+            return reportFailure(wantsJson, ExitCode::Usage,
+                                 QStringLiteral("clip-map-format-invalid"),
+                                 QStringLiteral("Unknown clip-map input or output format."));
+        }
+        std::optional<media::Rational> mappingFps;
+        if (parser.isSet(mappingFpsOption)) {
+            mappingFps = frameRateOption(parser.value(mappingFpsOption));
+            if (!mappingFps || !media::isValidPositiveRational(*mappingFps)) {
+                return reportFailure(wantsJson, ExitCode::Usage,
+                                     QStringLiteral("clip-map-frame-rate-invalid"),
+                                     QStringLiteral("--mapping-fps must be a positive decimal or rational."));
+            }
+        }
+        auto loaded = appsupport::readClipMap(parser.value(convertClipMapOption),
+                                              *inputFormat, mappingFps);
+        if (!loaded) {
+            return reportFailure(wantsJson, ExitCode::Input,
+                                 loaded.errorCode, loaded.error);
+        }
+        auto written = appsupport::writeClipMap(*loaded.document,
+                                                parser.value(outputOption), *outputFormat,
+                                                parser.isSet(overwriteOption));
+        if (!written) {
+            return reportFailure(wantsJson, ExitCode::Write,
+                                 written.errorCode, written.error);
+        }
+        const QStringList warnings = loaded.warnings + written.warnings;
+        if (wantsJson) {
+            QJsonArray warningArray;
+            for (const QString& warning : warnings) warningArray.push_back(warning);
+            const QJsonObject result{
+                {QStringLiteral("status"), QStringLiteral("ok")},
+                {QStringLiteral("kind"), QStringLiteral("clip-map-conversion")},
+                {QStringLiteral("inputFormat"), appsupport::clipMapFormatName(loaded.format)},
+                {QStringLiteral("outputFormat"), appsupport::clipMapFormatName(*outputFormat)},
+                {QStringLiteral("output"), written.outputPath},
+                {QStringLiteral("entries"), static_cast<qint64>(loaded.document->entries.size())},
+                {QStringLiteral("warnings"), warningArray},
+            };
+            QTextStream(stdout) << QJsonDocument(result).toJson(QJsonDocument::Compact) << '\n';
+        } else {
+            QTextStream stream(stdout);
+            stream << "Converted " << loaded.document->entries.size()
+                   << " clip-map entries to " << written.outputPath << '\n';
+            for (const QString& warning : warnings) stream << "Warning: " << warning << '\n';
+        }
         return static_cast<int>(ExitCode::Success);
     }
 

@@ -92,7 +92,7 @@ vertical product slices:
 | Target/project model | [docs/TARGET_PROFILES.md](docs/TARGET_PROFILES.md) | Model agreed; managed multi-target output not implemented |
 | Hardware target catalog | [docs/VDP_SUPPORT_ROADMAP.md](docs/VDP_SUPPORT_ROADMAP.md) | TMS9918A/F18A, V9938/V9958 bitmap and YJK/YAE, Master System Mode 4, and Genesis Mode V profiles implemented |
 | Character and sprite authoring | [docs/VDP_DESIGN_TOOLS.md](docs/VDP_DESIGN_TOOLS.md) | Editor foundations implemented; portable project model, allocation, validation, and full export remain |
-| Batch/frame sequences | [docs/BATCH_MODE.md](docs/BATCH_MODE.md) | Deferred until single-asset project/output contracts are stable |
+| Media sequences | [docs/BATCH_MODE.md](docs/BATCH_MODE.md) | Active; extraction/monitoring, frozen-recipe native batch output, uniform output playback, and initial mapping adapters implemented |
 | Release program | [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) | Beta pipeline active; stable-release gates remain |
 | Performance improvements | [docs/CONVERSION_ACCELERATION_RESEARCH.md](docs/CONVERSION_ACCELERATION_RESEARCH.md) | Research backlog; parity and architecture gates take priority |
 
@@ -123,6 +123,39 @@ manifests.
 
 Complete the first Stage 8 vertical slice and its hardware/reference review.
 Use the result to approve or revise the remaining support waves.
+
+## Media-sequence delivery track
+
+Media work proceeds through vertical slices that preserve the same application
+and target boundaries as the architecture milestones:
+
+1. **Media-tool foundation** — discover and validate FFmpeg/FFprobe, persist
+   executable overrides, expose desktop and CLI diagnostics, publish setup
+   instructions, and test missing/invalid tools. Implemented.
+2. **Probe and timeline** — inspect one file and build a rational synchronized
+   media timeline with bounded ranges and selectable video/audio streams.
+   The single-file portion is implemented; ordered segment sets remain.
+3. **Clip package extraction** — generate timestamped source frames and
+   optional audio with extraction scale/framing and atomic metadata. The
+   single-file CLI slice is implemented; crop, progress, cancellation, disk
+   estimates, resume validation, and desktop workflow remain.
+4. **Filmstrip and source monitor** — virtualized thumbnails, scrubbing,
+   frame stepping, timestamp playback, and selected-frame handoff are
+   implemented. Audio-master synchronization and decoded-image prefetch remain.
+5. **Target batch and output monitor** — global frozen-recipe conversion,
+   independent target framing, target-native per-frame outputs, target-faithful
+   previews, atomic run metadata, common-monitor playback, and bounded
+   deterministic frame-worker parallelism are implemented.
+   Folder and per-clip recipe overrides, progress, cancellation, and resume remain.
+6. **Mapping adapters** — versioned native JSON, CSV/TSV, Daphne/Hypseus
+   framefile import/export, and documented Unity/Godot JSON loaders are
+   implemented. Mapping-driven extraction and recipe resolution remain.
+7. **DVD structures** — capability-probe and use FFmpeg `dvdvideo` title,
+   chapter, program-chain, and angle selection without treating authored DVDs
+   as lexical VOB concatenations.
+8. **Batch hardening** — folder-of-clips operation, continuation policy,
+   content digests, interruption recovery, storage limits, and the complete
+   cross-platform test/package matrix.
 
 ## Cross-cutting quality gates
 
@@ -158,6 +191,10 @@ Use the result to approve or revise the remaining support waves.
    version-1 recipe compatibility.
 4. Begin Stage 2's general target-artifact and export applicability contracts.
 5. Re-run the complete platform matrix and record the descriptor milestone.
+
+For the active media track, the immediate next slice is audio-master playback
+synchronization, followed by mapping-driven clip-package extraction and
+global/per-entry recipe resolution.
 
 ## Documentation governance
 

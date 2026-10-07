@@ -72,6 +72,57 @@ set_target_properties(test_export_writer PROPERTIES AUTOMOC OFF)
 
 add_test(NAME export_writer_validation COMMAND test_export_writer)
 
+add_executable(test_media_timeline
+    test_media_timeline.cpp
+)
+target_link_libraries(test_media_timeline PRIVATE retrovdp_media)
+set_target_properties(test_media_timeline PROPERTIES AUTOMOC OFF)
+add_test(NAME media_timeline_validation COMMAND test_media_timeline)
+
+add_executable(test_clip_maps
+    test_clip_maps.cpp
+)
+target_link_libraries(test_clip_maps
+    PRIVATE
+        retrovdp_app_support
+        Qt6::Core
+)
+set_target_properties(test_clip_maps PROPERTIES AUTOMOC OFF)
+add_test(NAME clip_map_validation COMMAND test_clip_maps)
+
+add_executable(media_ffmpeg_fixture
+    media_tool_fixture.cpp
+)
+target_link_libraries(media_ffmpeg_fixture PRIVATE Qt6::Core)
+target_compile_definitions(media_ffmpeg_fixture PRIVATE MEDIA_TOOL_NAME="ffmpeg")
+set_target_properties(media_ffmpeg_fixture PROPERTIES AUTOMOC OFF)
+
+add_executable(media_ffprobe_fixture
+    media_tool_fixture.cpp
+)
+target_link_libraries(media_ffprobe_fixture PRIVATE Qt6::Core)
+target_compile_definitions(media_ffprobe_fixture PRIVATE MEDIA_TOOL_NAME="ffprobe")
+set_target_properties(media_ffprobe_fixture PROPERTIES AUTOMOC OFF)
+
+add_executable(test_media_tools
+    test_media_tools.cpp
+)
+target_link_libraries(test_media_tools
+    PRIVATE
+        retrovdp_app_support
+        Qt6::Core
+)
+target_compile_definitions(test_media_tools
+    PRIVATE
+        RETROVDP_FFMPEG_FIXTURE_PATH="$<TARGET_FILE:media_ffmpeg_fixture>"
+        RETROVDP_FFPROBE_FIXTURE_PATH="$<TARGET_FILE:media_ffprobe_fixture>"
+        RETROVDP_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
+        RETROVDP_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
+add_dependencies(test_media_tools media_ffmpeg_fixture media_ffprobe_fixture)
+set_target_properties(test_media_tools PROPERTIES AUTOMOC OFF)
+add_test(NAME media_tool_discovery_validation COMMAND test_media_tools)
+
 add_executable(test_interface_workflow
     test_interface_workflow.cpp
 )
@@ -112,11 +163,13 @@ target_link_libraries(test_cli_workflow
 target_compile_definitions(test_cli_workflow
     PRIVATE
         RETROVDP_CLI_PATH="$<TARGET_FILE:RetroVDPStudioCli>"
+        RETROVDP_FFMPEG_FIXTURE_PATH="$<TARGET_FILE:media_ffmpeg_fixture>"
+        RETROVDP_FFPROBE_FIXTURE_PATH="$<TARGET_FILE:media_ffprobe_fixture>"
         RETROVDP_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         RETROVDP_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
-add_dependencies(test_cli_workflow RetroVDPStudioCli)
+add_dependencies(test_cli_workflow RetroVDPStudioCli media_ffmpeg_fixture media_ffprobe_fixture)
 set_target_properties(test_cli_workflow PROPERTIES AUTOMOC OFF)
 
 add_test(NAME cli_workflow_validation COMMAND test_cli_workflow)

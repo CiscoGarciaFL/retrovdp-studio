@@ -139,6 +139,25 @@ Add `--json` for machine-readable results. See
 [`docs/COMMAND_LINE.md`](docs/COMMAND_LINE.md) for all modes, presets, formats,
 overwrite behavior, and exit codes.
 
+The media-sequence program uses separately installed FFmpeg and FFprobe tools.
+Tool discovery is available in **Preferences → Media Tools** and through
+`retrovdp-cli --check-media-tools`; the CLI can also probe one media file and
+extract timestamped PNG frames plus optional audio into an atomic clip package.
+The desktop **Open Media Clip** command loads that package into a source monitor
+with playback controls, frame stepping, scrubbing, and a thumbnail filmstrip.
+**Convert Clip** applies one frozen Screen Image recipe asynchronously, writes
+per-frame native target assets and uniform target-faithful previews, then opens
+the completed output run in the same monitor. Batch conversion can use a
+configurable bounded pool of frame workers without launching extra FFmpeg
+processes. The CLI can also normalize and
+convert native JSON, CSV/TSV, and Daphne/Hypseus clip mappings; the native
+schema includes reference loaders for Unity and Godot ports.
+See
+[`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform setup instructions
+[`docs/CLIP_MAPS.md`](docs/CLIP_MAPS.md) for mapping interchange, and
+[`docs/BATCH_MODE.md`](docs/BATCH_MODE.md) for the active video, audio,
+clip-mapping, and frame-conversion plan.
+
 Zed users can run the matching configure, build, and test entries from the
 task picker. CMake writes `compile_commands.json` into each build directory so
 Zed's `clangd` language server receives the project's actual compile flags.
