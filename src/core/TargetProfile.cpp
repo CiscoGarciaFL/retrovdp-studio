@@ -66,6 +66,23 @@ constexpr std::array segaGenesisModes{
     ConversionMode::Mode5GenesisH40Pal,
 };
 
+constexpr std::array huc6270Modes{
+    ConversionMode::HuC6270Background256,
+    ConversionMode::HuC6270Background320,
+};
+
+constexpr std::array vicIIModes{
+    ConversionMode::VicIIHiresCharacter,
+    ConversionMode::VicIIMulticolorCharacter,
+    ConversionMode::VicIIHiresBitmap,
+    ConversionMode::VicIIMulticolorBitmap,
+};
+
+constexpr std::array vicModes{
+    ConversionMode::VicHiresCharacter,
+    ConversionMode::VicMulticolorCharacter,
+};
+
 constexpr TargetCapability commonCapabilities =
     TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
     | TargetCapability::Sprites | TargetCapability::TileMaps
@@ -209,6 +226,62 @@ const std::array modes{
                           {320, 240, {1, 1}},
                           {PaletteModel::ProgrammableRgb, 64, 61, 3},
                           ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::HuC6270Background256,
+                          mustId<ModeId>("huc6270-background-256x224"),
+                          "HuC6270 Background (256x224)",
+                          TargetProfileId::HuC6270,
+                          {256, 224, {7, 6}},
+                          {PaletteModel::ProgrammableRgb, 512, 241, 3},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::HuC6270Background320,
+                          mustId<ModeId>("huc6270-background-320x224"),
+                          "HuC6270 Background (320x224)",
+                          TargetProfileId::HuC6270,
+                          {320, 224, {14, 15}},
+                          {PaletteModel::ProgrammableRgb, 512, 241, 3},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::VicIIHiresCharacter,
+                          mustId<ModeId>("vic-ii-hires-character"),
+                          "VIC-II High-Resolution Character (320x200)",
+                          TargetProfileId::VicII,
+                          {320, 200, {5, 6}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::VicIIMulticolorCharacter,
+                          mustId<ModeId>("vic-ii-multicolor-character"),
+                          "VIC-II Multicolor Character (160x200)",
+                          TargetProfileId::VicII,
+                          {160, 200, {5, 3}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::VicIIHiresBitmap,
+                          mustId<ModeId>("vic-ii-hires-bitmap"),
+                          "VIC-II High-Resolution Bitmap (320x200)",
+                          TargetProfileId::VicII,
+                          {320, 200, {5, 6}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::VicIIMulticolorBitmap,
+                          mustId<ModeId>("vic-ii-multicolor-bitmap"),
+                          "VIC-II Multicolor Bitmap (160x200)",
+                          TargetProfileId::VicII,
+                          {160, 200, {5, 3}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::VicHiresCharacter,
+                          mustId<ModeId>("vic-hires-character"),
+                          "VIC-20 High-Resolution Character (176x184)",
+                          TargetProfileId::Vic,
+                          {176, 184, {23, 16}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::VicMulticolorCharacter,
+                          mustId<ModeId>("vic-multicolor-character"),
+                          "VIC-20 Multicolor Character (88x184)",
+                          TargetProfileId::Vic,
+                          {88, 184, {23, 8}},
+                          {PaletteModel::FixedRevisionDependent, 16, 16, 0},
+                          ModeOption::None},
 };
 
 const std::array profiles{
@@ -270,6 +343,41 @@ const std::array profiles{
                       | TargetCapability::HorizontalScroll,
                   {8, 8, 2048, 1, 40, 28},
                   {8, 32, 80, 80, 4, false, true}, segaGenesisModes},
+    TargetProfile{TargetProfileId::HuC6270,
+                  mustId<TargetId>("huc6270"),
+                  "NEC / Hudson HuC6270",
+                  TargetKind::VideoDisplayProcessor, TargetProfileStatus::Implemented,
+                  64U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor
+                      | TargetCapability::HorizontalScroll,
+                  {8, 8, 1920, 1, 40, 28},
+                  {16, 64, 64, 64, 4, false, true}, huc6270Modes},
+    TargetProfile{TargetProfileId::VicII,
+                  mustId<TargetId>("vic-ii"),
+                  "MOS VIC-II",
+                  TargetKind::VideoDisplayProcessor, TargetProfileStatus::Implemented,
+                  16U * 1024U,
+                  TargetCapability::FixedPalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor
+                      | TargetCapability::HorizontalScroll,
+                  {8, 8, 256, 1, 40, 25},
+                  {24, 24, 8, 8, 2, false, false}, vicIIModes},
+    TargetProfile{TargetProfileId::Vic,
+                  mustId<TargetId>("vic"),
+                  "MOS VIC (VIC-20)",
+                  TargetKind::VideoDisplayProcessor, TargetProfileStatus::Implemented,
+                  16U * 1024U,
+                  TargetCapability::FixedPalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::TileMaps
+                      | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor,
+                  {8, 8, 256, 1, 22, 23},
+                  {}, vicModes},
 };
 
 } // namespace
@@ -438,6 +546,12 @@ ConversionMode defaultConversionMode(TargetProfileId profile)
         return ConversionMode::Mode4Sms192;
     if (profile == TargetProfileId::SegaGenesis)
         return ConversionMode::Mode5GenesisH40;
+    if (profile == TargetProfileId::HuC6270)
+        return ConversionMode::HuC6270Background256;
+    if (profile == TargetProfileId::VicII)
+        return ConversionMode::VicIIHiresCharacter;
+    if (profile == TargetProfileId::Vic)
+        return ConversionMode::VicHiresCharacter;
     return supported.front();
 }
 

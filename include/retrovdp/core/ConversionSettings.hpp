@@ -11,6 +11,9 @@ enum class TargetProfileId : std::uint8_t {
     V9958,
     SegaMasterSystem,
     SegaGenesis,
+    HuC6270,
+    VicII,
+    Vic,
 };
 
 enum class ConversionMode : std::uint8_t {
@@ -37,6 +40,14 @@ enum class ConversionMode : std::uint8_t {
     Mode5GenesisH40,
     Mode5GenesisH32Pal,
     Mode5GenesisH40Pal,
+    HuC6270Background256,
+    HuC6270Background320,
+    VicIIHiresCharacter,
+    VicIIMulticolorCharacter,
+    VicIIHiresBitmap,
+    VicIIMulticolorBitmap,
+    VicHiresCharacter,
+    VicMulticolorCharacter,
 };
 
 enum class DitherMode : std::uint8_t {

@@ -93,6 +93,41 @@ constexpr std::array mode5GenesisH40Tables{
     TargetTableLayout{TargetTableRole::Palette, 128U},
     TargetTableLayout{TargetTableRole::DisplayRegisters, 24U},
 };
+constexpr std::array huc6270Background256Tables{
+    TargetTableLayout{TargetTableRole::Pattern, 0xf800U},
+    TargetTableLayout{TargetTableRole::TileMap, 0x0800U},
+    TargetTableLayout{TargetTableRole::Palette, 1024U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 42U},
+};
+constexpr std::array huc6270Background320Tables{
+    TargetTableLayout{TargetTableRole::Pattern, 0xf000U},
+    TargetTableLayout{TargetTableRole::TileMap, 0x1000U},
+    TargetTableLayout{TargetTableRole::Palette, 1024U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 42U},
+};
+constexpr std::array vicIICharacterTables{
+    TargetTableLayout{TargetTableRole::Pattern, 2048U},
+    TargetTableLayout{TargetTableRole::TileMap, 1000U},
+    TargetTableLayout{TargetTableRole::Color, 1000U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 47U},
+};
+constexpr std::array vicIIHiresBitmapTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 8000U},
+    TargetTableLayout{TargetTableRole::TileMap, 1000U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 47U},
+};
+constexpr std::array vicIIMulticolorBitmapTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 8000U},
+    TargetTableLayout{TargetTableRole::TileMap, 1000U},
+    TargetTableLayout{TargetTableRole::Color, 1000U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 47U},
+};
+constexpr std::array vicCharacterTables{
+    TargetTableLayout{TargetTableRole::Pattern, 2048U},
+    TargetTableLayout{TargetTableRole::TileMap, 506U},
+    TargetTableLayout{TargetTableRole::Color, 506U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
 
 void setPaletteError(PaletteError* destination, PaletteError error)
 {
@@ -201,6 +236,14 @@ std::span<const TargetTableLayout> expectedTargetTables(ConversionMode mode)
     case ConversionMode::Mode5GenesisH32Pal: return mode5GenesisH32Tables;
     case ConversionMode::Mode5GenesisH40:
     case ConversionMode::Mode5GenesisH40Pal: return mode5GenesisH40Tables;
+    case ConversionMode::HuC6270Background256: return huc6270Background256Tables;
+    case ConversionMode::HuC6270Background320: return huc6270Background320Tables;
+    case ConversionMode::VicIIHiresCharacter:
+    case ConversionMode::VicIIMulticolorCharacter: return vicIICharacterTables;
+    case ConversionMode::VicIIHiresBitmap: return vicIIHiresBitmapTables;
+    case ConversionMode::VicIIMulticolorBitmap: return vicIIMulticolorBitmapTables;
+    case ConversionMode::VicHiresCharacter:
+    case ConversionMode::VicMulticolorCharacter: return vicCharacterTables;
     }
     return {};
 }

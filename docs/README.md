@@ -1,6 +1,6 @@
 # Documentation map
 
-Status: documentation governance index, updated 2026-09-30.
+Status: documentation governance index, updated 2026-10-07.
 
 This index identifies which documents are authoritative plans, current
 contracts, operating guides, research, or historical evidence. It prevents a
@@ -15,7 +15,8 @@ completed phase checklist from competing with the current architecture plan.
 | [ARCHITECTURE_IMPLEMENTATION_PLAN.md](ARCHITECTURE_IMPLEMENTATION_PLAN.md) | Ordered architecture migration, work packages, and exit gates |
 | [TARGET_PROFILES.md](TARGET_PROFILES.md) | Product contract for reusable sources, target profiles, managed outputs, and format applicability |
 | [TARGET_IMPLEMENTATION_GUIDE.md](TARGET_IMPLEMENTATION_GUIDE.md) | Required Screen Image, Character, and Sprite accounting for every target, including approximation and disablement rules |
-| [VDP_SUPPORT_ROADMAP.md](VDP_SUPPORT_ROADMAP.md) | Planned hardware catalog, target families, and per-target acceptance policy |
+| [VDP_SUPPORT_ROADMAP.md](VDP_SUPPORT_ROADMAP.md) | Hardware catalog, target families, implementation status, and per-target acceptance policy |
+| [NEC_COMMODORE_TARGETS.md](NEC_COMMODORE_TARGETS.md) | Implemented HuC6270, VIC-II, and VIC mode, memory, export, and reference contract |
 | [VDP_DESIGN_TOOLS.md](VDP_DESIGN_TOOLS.md) | Character, pattern, sprite/object, allocation, and hardware-editor behavior |
 | [BATCH_MODE.md](BATCH_MODE.md) | Active synchronized media-sequence contract for video, audio, mappings, extraction, playback, and batch conversion |
 | [CLIP_MAPS.md](CLIP_MAPS.md) | Implemented clip-map schema, CSV/TSV and Daphne/Hypseus adapters, CLI, and engine loaders |

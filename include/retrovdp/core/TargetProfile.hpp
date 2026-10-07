@@ -26,6 +26,7 @@ enum class PaletteModel : std::uint8_t {
     FixedRgb332,
     Yjk,
     YjkWithPalette,
+    FixedRevisionDependent,
 };
 
 struct Rational {

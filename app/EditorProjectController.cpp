@@ -52,6 +52,9 @@ QString previewName(int target)
     case 3: return QStringLiteral("v9958");
     case 4: return QStringLiteral("sega-sms-vdp");
     case 5: return QStringLiteral("sega-genesis-vdp");
+    case 6: return QStringLiteral("huc6270");
+    case 7: return QStringLiteral("vic-ii");
+    case 8: return QStringLiteral("vic");
     default: return QStringLiteral("tms9918a");
     }
 }
@@ -139,6 +142,9 @@ QVariantList EditorProjectController::supportedTargets() const
     if (v9958Enabled_) append(retrovdp::core::TargetProfileId::V9958);
     if (segaSmsEnabled_) append(retrovdp::core::TargetProfileId::SegaMasterSystem);
     if (segaGenesisEnabled_) append(retrovdp::core::TargetProfileId::SegaGenesis);
+    if (huc6270Enabled_) append(retrovdp::core::TargetProfileId::HuC6270);
+    if (vicIiEnabled_) append(retrovdp::core::TargetProfileId::VicII);
+    if (vicEnabled_) append(retrovdp::core::TargetProfileId::Vic);
     return result;
 }
 
@@ -167,6 +173,13 @@ QVariantMap EditorProjectController::activeTargetInfo() const
                 for (int width = 8; width <= 32; width += 8)
                     spriteSizes.push_back(width * 100 + height);
             }
+        } else if (usesHuC6270Editor()) {
+            for (const int height : {16, 32, 64}) {
+                for (const int width : {16, 32})
+                    spriteSizes.push_back(width * 100 + height);
+            }
+        } else if (usesVicIIEditor()) {
+            spriteSizes.push_back(2421);
         } else {
             spriteSizes.push_back(static_cast<int>(profile.sprites.minimumPixelSize));
             if (profile.sprites.maximumPixelSize != profile.sprites.minimumPixelSize)
@@ -203,11 +216,14 @@ QVariantMap EditorProjectController::activeTargetInfo() const
         {QStringLiteral("characterColorDepth"), usesIndexed4BppEditor() ? 4 : 1},
         {QStringLiteral("characterInterpretation"),
          usesSmsMode4Editor() ? QStringLiteral("Mode 4 planar tiles")
-                              : usesGenesisMode5Editor()
-                                  ? QStringLiteral("Mode V packed 4bpp tiles")
-                              : QStringLiteral("Target-compatible patterns")},
+         : usesGenesisMode5Editor() ? QStringLiteral("Mode V packed 4bpp tiles")
+         : usesHuC6270Editor() ? QStringLiteral("HuC6270 4-plane background tiles")
+         : usesVicIIEditor() ? QStringLiteral("VIC-II high-resolution and multicolor characters")
+         : activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::Vic)
+             ? QStringLiteral("VIC high-resolution and multicolor characters")
+             : QStringLiteral("Target-compatible patterns")},
         {QStringLiteral("characterPaletteBankCount"),
-         usesGenesisMode5Editor() ? 4 : 1},
+         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16 : 1)},
         {QStringLiteral("sprites"),
          has(retrovdp::core::TargetCapability::Sprites)},
         {QStringLiteral("spriteSizes"), spriteSizes},
@@ -228,13 +244,19 @@ QVariantMap EditorProjectController::activeTargetInfo() const
              ? QStringLiteral("Mode 4 sprites; 8x8 or 8x16, 4bpp sprite palette")
              : usesGenesisMode5Editor()
                  ? QStringLiteral("Mode V sprites; independent 8/16/24/32 width and height, 4bpp palette")
+             : usesHuC6270Editor()
+                 ? QStringLiteral("HuC6270 sprites; 16/32 width by 16/32/64 height, 4bpp palette")
+             : usesVicIIEditor()
+                 ? QStringLiteral("VIC-II 24x21 sprites; high-resolution or multicolor")
              : QStringLiteral("Target-compatible sprites")},
         {QStringLiteral("spriteMaximumPerScanline"),
          usesSmsMode4Editor() ? 8 : (usesGenesisMode5Editor()
-             ? (imageInput_->targetWidth() == 320 ? 20 : 16) : 0)},
-        {QStringLiteral("spriteSupportsFlipAttributes"), !usesSmsMode4Editor()},
+             ? (imageInput_->targetWidth() == 320 ? 20 : 16)
+             : (usesHuC6270Editor() ? 16 : (usesVicIIEditor() ? 8 : 0)))},
+        {QStringLiteral("spriteSupportsFlipAttributes"),
+         usesGenesisMode5Editor() || usesHuC6270Editor()},
         {QStringLiteral("spritePaletteBankCount"),
-         usesGenesisMode5Editor() ? 4 : 1},
+         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16 : 1)},
     };
 }
 
@@ -269,7 +291,9 @@ bool EditorProjectController::targetEnabled(int value) const
 {
     return (value == 0 && tms9918aEnabled_) || (value == 1 && f18aEnabled_)
         || (value == 2 && v9938Enabled_) || (value == 3 && v9958Enabled_)
-        || (value == 4 && segaSmsEnabled_) || (value == 5 && segaGenesisEnabled_);
+        || (value == 4 && segaSmsEnabled_) || (value == 5 && segaGenesisEnabled_)
+        || (value == 6 && huc6270Enabled_) || (value == 7 && vicIiEnabled_)
+        || (value == 8 && vicEnabled_);
 }
 
 void EditorProjectController::setProjectName(const QString& value)
@@ -312,9 +336,26 @@ bool EditorProjectController::usesGenesisMode5Editor() const
         == static_cast<int>(retrovdp::core::TargetProfileId::SegaGenesis);
 }
 
+bool EditorProjectController::usesHuC6270Editor() const
+{
+    return activeTarget()
+        == static_cast<int>(retrovdp::core::TargetProfileId::HuC6270);
+}
+
+bool EditorProjectController::usesVicIIEditor() const
+{
+    return activeTarget()
+        == static_cast<int>(retrovdp::core::TargetProfileId::VicII);
+}
+
+bool EditorProjectController::usesCompoundSpriteEditor() const
+{
+    return usesGenesisMode5Editor() || usesHuC6270Editor() || usesVicIIEditor();
+}
+
 bool EditorProjectController::usesIndexed4BppEditor() const
 {
-    return usesSmsMode4Editor() || usesGenesisMode5Editor();
+    return usesSmsMode4Editor() || usesGenesisMode5Editor() || usesHuC6270Editor();
 }
 
 bool EditorProjectController::usesPerSpriteSizeEditor() const
@@ -327,7 +368,7 @@ bool EditorProjectController::usesPerSpriteSizeEditor() const
 
 QVariantList EditorProjectController::characterPaletteColors() const
 {
-    if (usesGenesisMode5Editor()) {
+    if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = characterPaletteBank_ * 16;
         if (palette.size() >= start + 16) return palette.mid(start, 16);
@@ -350,6 +391,26 @@ QVariantList EditorProjectController::characterPaletteColors() const
             QColor(255, 85, 85), QColor(85, 255, 85), QColor(255, 255, 85),
             QColor(85, 85, 255), QColor(255, 85, 255), QColor(85, 255, 255),
             QColor(255, 255, 255),
+        };
+    }
+    if (usesVicIIEditor()) {
+        return {
+            QColor(0, 0, 0), QColor(255, 255, 255), QColor(136, 0, 0),
+            QColor(170, 255, 238), QColor(204, 68, 204), QColor(0, 204, 85),
+            QColor(0, 0, 170), QColor(238, 238, 119), QColor(221, 136, 85),
+            QColor(102, 68, 0), QColor(255, 119, 119), QColor(51, 51, 51),
+            QColor(119, 119, 119), QColor(170, 255, 102), QColor(0, 136, 255),
+            QColor(187, 187, 187),
+        };
+    }
+    if (activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::Vic)) {
+        return {
+            QColor(0, 0, 0), QColor(255, 255, 255), QColor(182, 31, 33),
+            QColor(77, 240, 255), QColor(180, 65, 223), QColor(58, 209, 79),
+            QColor(43, 43, 216), QColor(255, 255, 79), QColor(216, 143, 34),
+            QColor(255, 194, 91), QColor(255, 116, 118), QColor(148, 255, 255),
+            QColor(255, 137, 255), QColor(138, 255, 159), QColor(128, 128, 255),
+            QColor(255, 255, 191),
         };
     }
     // Hardware color order, including transparent color zero. The baseline
@@ -383,7 +444,7 @@ QVariantList EditorProjectController::characterPaletteColors() const
 
 QVariantList EditorProjectController::spritePaletteColors() const
 {
-    if (usesGenesisMode5Editor()) {
+    if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = activeSpritePaletteBank() * 16;
         if (palette.size() >= start + 16) return palette.mid(start, 16);
@@ -417,7 +478,8 @@ void EditorProjectController::ensureIndexedCharacterOverride(
 
 void EditorProjectController::setCharacterPaletteBank(int value)
 {
-    value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3 : 0);
+    value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
+                              : (usesHuC6270Editor() ? 15 : 0));
     if (characterPaletteBank_ == value) return;
     characterPaletteBank_ = value;
     ++characterRevision_;
@@ -767,7 +829,7 @@ void EditorProjectController::setActiveTarget(int value)
     const int targetScope = retrovdp::core::hasCapability(
         profile.capabilities, retrovdp::core::TargetCapability::EnhancedColor) ? 1 : 0;
     setEditScope(targetScope);
-    if (usesGenesisMode5Editor() && !spriteSets_.empty()) {
+    if (usesCompoundSpriteEditor() && !spriteSets_.empty()) {
         auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                               .placements[static_cast<std::size_t>(activeSprite_)];
         placement.size = normalizedSpriteSize(placement.size);
@@ -806,8 +868,12 @@ void EditorProjectController::configureProjectWithTargets(
     v9958Enabled_ = plannedTargetIds.contains(QStringLiteral("v9958"));
     segaSmsEnabled_ = plannedTargetIds.contains(QStringLiteral("sega-sms-vdp"));
     segaGenesisEnabled_ = plannedTargetIds.contains(QStringLiteral("sega-genesis-vdp"));
+    huc6270Enabled_ = plannedTargetIds.contains(QStringLiteral("huc6270"));
+    vicIiEnabled_ = plannedTargetIds.contains(QStringLiteral("vic-ii"));
+    vicEnabled_ = plannedTargetIds.contains(QStringLiteral("vic"));
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
-        && !segaSmsEnabled_ && !segaGenesisEnabled_) {
+        && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
+        && !vicIiEnabled_ && !vicEnabled_) {
         tms9918aEnabled_ = true;
     }
     plannedTargetIds_.clear();
@@ -819,6 +885,9 @@ void EditorProjectController::configureProjectWithTargets(
             && id != QStringLiteral("v9958")
             && id != QStringLiteral("sega-sms-vdp")
             && id != QStringLiteral("sega-genesis-vdp")
+            && id != QStringLiteral("huc6270")
+            && id != QStringLiteral("vic-ii")
+            && id != QStringLiteral("vic")
             && !plannedTargetIds_.contains(id)) {
             plannedTargetIds_.push_back(id);
         }
@@ -832,7 +901,10 @@ void EditorProjectController::configureProjectWithTargets(
                         : (f18aEnabled_ ? 1
                            : (v9938Enabled_ ? 2
                               : (v9958Enabled_ ? 3
-                                 : (segaSmsEnabled_ ? 4 : 5)))));
+                                 : (segaSmsEnabled_ ? 4
+                                    : (segaGenesisEnabled_ ? 5
+                                       : (huc6270Enabled_ ? 6
+                                          : (vicIiEnabled_ ? 7 : 8))))))));
     else
         setActiveTarget(activeTarget());
     emit projectChanged();
@@ -904,7 +976,7 @@ void EditorProjectController::createProjectWithTargets(
 void EditorProjectController::setPreviewTarget(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(retrovdp::core::TargetProfileId::SegaGenesis));
+                       static_cast<int>(retrovdp::core::TargetProfileId::Vic));
     if (previewTarget_ == value) return;
     previewTarget_ = value;
     emit projectChanged();
@@ -2251,9 +2323,9 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
     }
     QJsonArray spriteSets;
     for (const auto& set : spriteSets_) {
-        const auto saveSpriteBank = [](const auto& patterns, int size) {
+        const auto saveSpriteBank = [](const auto& patterns, int pixelCount) {
             QJsonArray saved;
-            const int count = size * size;
+            const int count = pixelCount;
             for (int index = 0; index < static_cast<int>(patterns.size()); ++index) {
                 const auto& pattern = patterns[static_cast<std::size_t>(index)];
                 const bool hasBaseline = std::any_of(
@@ -2300,11 +2372,11 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
         spriteSets.push_back(QJsonObject{{QStringLiteral("name"), set.name},
                                           {QStringLiteral("capacity"), 80},
                                           {QStringLiteral("patterns8"),
-                                           saveSpriteBank(set.patterns8, 8)},
+                                           saveSpriteBank(set.patterns8, 64)},
                                           {QStringLiteral("patterns16"),
-                                           saveSpriteBank(set.patterns16, 16)},
+                                           saveSpriteBank(set.patterns16, 256)},
                                           {QStringLiteral("patternsGenesis"),
-                                           saveSpriteBank(set.patternsGenesis, 32)},
+                                           saveSpriteBank(set.patternsGenesis, 2048)},
                                           {QStringLiteral("placements"), placements}});
     }
     QJsonArray spriteEditors;
@@ -2324,6 +2396,9 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
     if (segaSmsEnabled_) projectTargets.push_back(QStringLiteral("sega-sms-vdp"));
     if (segaGenesisEnabled_)
         projectTargets.push_back(QStringLiteral("sega-genesis-vdp"));
+    if (huc6270Enabled_) projectTargets.push_back(QStringLiteral("huc6270"));
+    if (vicIiEnabled_) projectTargets.push_back(QStringLiteral("vic-ii"));
+    if (vicEnabled_) projectTargets.push_back(QStringLiteral("vic"));
     for (const QString& targetId : plannedTargetIds_)
         projectTargets.push_back(targetId);
 
@@ -2352,7 +2427,13 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                      {QStringLiteral("sega-sms-vdp"),
                       QJsonObject{{QStringLiteral("enabled"), segaSmsEnabled_}}},
                      {QStringLiteral("sega-genesis-vdp"),
-                      QJsonObject{{QStringLiteral("enabled"), segaGenesisEnabled_}}}}},
+                      QJsonObject{{QStringLiteral("enabled"), segaGenesisEnabled_}}},
+                     {QStringLiteral("huc6270"),
+                      QJsonObject{{QStringLiteral("enabled"), huc6270Enabled_}}},
+                     {QStringLiteral("vic-ii"),
+                      QJsonObject{{QStringLiteral("enabled"), vicIiEnabled_}}},
+                     {QStringLiteral("vic"),
+                      QJsonObject{{QStringLiteral("enabled"), vicEnabled_}}}}},
         {QStringLiteral("preview"), previewName(previewTarget_)},
         {QStringLiteral("editScope"), editScope_ == 1
                                              ? QStringLiteral("f18a-enhancements")
@@ -2461,6 +2542,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         segaSmsEnabled_ = configuredTargets.contains(QStringLiteral("sega-sms-vdp"));
         segaGenesisEnabled_ = configuredTargets.contains(
             QStringLiteral("sega-genesis-vdp"));
+        huc6270Enabled_ = configuredTargets.contains(QStringLiteral("huc6270"));
+        vicIiEnabled_ = configuredTargets.contains(QStringLiteral("vic-ii"));
+        vicEnabled_ = configuredTargets.contains(QStringLiteral("vic"));
         plannedTargetIds_.clear();
         for (const QJsonValue& targetValue : configuredTargets) {
             const QString targetId = targetValue.toString().trimmed();
@@ -2470,6 +2554,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 && targetId != QStringLiteral("v9958")
                 && targetId != QStringLiteral("sega-sms-vdp")
                 && targetId != QStringLiteral("sega-genesis-vdp")
+                && targetId != QStringLiteral("huc6270")
+                && targetId != QStringLiteral("vic-ii")
+                && targetId != QStringLiteral("vic")
                 && !plannedTargetIds_.contains(targetId)) {
                 plannedTargetIds_.push_back(targetId);
             }
@@ -2493,16 +2580,26 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         segaGenesisEnabled_ = profiles.value(
             QStringLiteral("sega-genesis-vdp")).toObject()
                                   .value(QStringLiteral("enabled")).toBool(false);
+        huc6270Enabled_ = profiles.value(QStringLiteral("huc6270")).toObject()
+                              .value(QStringLiteral("enabled")).toBool(false);
+        vicIiEnabled_ = profiles.value(QStringLiteral("vic-ii")).toObject()
+                            .value(QStringLiteral("enabled")).toBool(false);
+        vicEnabled_ = profiles.value(QStringLiteral("vic")).toObject()
+                          .value(QStringLiteral("enabled")).toBool(false);
     }
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
-        && !segaSmsEnabled_ && !segaGenesisEnabled_)
+        && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
+        && !vicIiEnabled_ && !vicEnabled_)
         tms9918aEnabled_ = true;
     if (!targetEnabled(activeTarget())) {
         const int fallbackTarget = tms9918aEnabled_ ? 0
                                                    : (f18aEnabled_ ? 1
                                                                   : (v9938Enabled_ ? 2
                                                                      : (v9958Enabled_ ? 3
-                                                                        : (segaSmsEnabled_ ? 4 : 5))));
+                                                                        : (segaSmsEnabled_ ? 4
+                                                                           : (segaGenesisEnabled_ ? 5
+                                                                              : (huc6270Enabled_ ? 6
+                                                                                 : (vicIiEnabled_ ? 7 : 8)))))));
         imageInput_->setTargetProfile(fallbackTarget);
     }
     previewTarget_ = activeTarget();
@@ -2524,7 +2621,7 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         character.value(QStringLiteral("backgroundColor")).toInt(1), 0, 15);
     characterPaletteBank_ = std::clamp(
         character.value(QStringLiteral("paletteBank")).toInt(), 0,
-        usesGenesisMode5Editor() ? 3 : 0);
+        usesGenesisMode5Editor() ? 3 : (usesHuC6270Editor() ? 15 : 0));
     activeCharacterPlane_ = std::clamp(
         character.value(QStringLiteral("activePlane")).toInt(), 0,
         usesGenesisMode5Editor() ? 2 : 0);
@@ -2643,8 +2740,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         if (!name.isEmpty()) set.name = name;
         const auto loadSpriteBank = [this](const QJsonArray& saved,
                                            auto& patterns,
-                                           int size) {
-            const int count = size * size;
+                                           int pixelCount) {
+            const int count = pixelCount;
             for (const QJsonValue& value : saved) {
                 const QJsonObject object = value.toObject();
                 const int index = object.value(QStringLiteral("index")).toInt(-1);
@@ -2675,11 +2772,11 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
             }
         };
         loadSpriteBank(savedSet.value(QStringLiteral("patterns8")).toArray(),
-                       set.patterns8, 8);
+                       set.patterns8, 64);
         loadSpriteBank(savedSet.value(QStringLiteral("patterns16")).toArray(),
-                       set.patterns16, 16);
+                       set.patterns16, 256);
         loadSpriteBank(savedSet.value(QStringLiteral("patternsGenesis")).toArray(),
-                       set.patternsGenesis, 32);
+                       set.patternsGenesis, 2048);
         const QJsonArray placements = savedSet.value(QStringLiteral("placements")).toArray();
         for (int index = 0;
              index < std::min(80, static_cast<int>(placements.size())); ++index) {

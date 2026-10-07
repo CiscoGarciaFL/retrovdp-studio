@@ -1,6 +1,6 @@
 # RetroVDP Studio project plan
 
-Status: active roadmap, updated 2026-10-01.
+Status: active roadmap, updated 2026-10-07.
 
 Presentation checkpoint: project naming and configured targets now persist in
 the version-1 project envelope; the main window exposes project lifecycle
@@ -43,7 +43,8 @@ deterministic deployment manifest.
 The following program is implemented and maintained rather than planned again:
 
 - a portable C++20 conversion core for the audited TMS9918A, F18A, Yamaha
-  V9938/V9958, Sega Master System, and Sega Genesis/Mega Drive conversion modes;
+  V9938/V9958, Sega Master System, Sega Genesis/Mega Drive, HuC6270, VIC-II,
+  and VIC conversion modes;
 - bounded common-raster, PCX, and supported retro-format input;
 - deterministic target-table generation and golden fixtures;
 - RAW, RLE, TIFILES, V9T9, MSX, Coleco, Adam, Extended BASIC, ROM, and PNG

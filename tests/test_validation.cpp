@@ -1,10 +1,12 @@
 #include "retrovdp/core/Bitmap9918Converter.hpp"
+#include "retrovdp/core/CommodoreVdpConverter.hpp"
 #include "retrovdp/core/ColorMath.hpp"
 #include "retrovdp/core/ConversionTypes.hpp"
 #include "retrovdp/core/ConversionJobController.hpp"
 #include "retrovdp/core/ConversionPerformance.hpp"
 #include "retrovdp/core/Dithering.hpp"
 #include "retrovdp/core/F18AConverter.hpp"
+#include "retrovdp/core/HuC6270Converter.hpp"
 #include "retrovdp/core/ImageAdjustments.hpp"
 #include "retrovdp/core/ImageTransform.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
@@ -86,6 +88,7 @@ using retrovdp::core::colorDistanceSquared;
 using retrovdp::core::convertBlackAndWhiteBitmap9918;
 using retrovdp::core::convertBitmapColorOnly9918;
 using retrovdp::core::convertBitmap9918;
+using retrovdp::core::convertCommodoreDisplay;
 using retrovdp::core::convertDualMulticolor9918;
 using retrovdp::core::convertPalettedBitmapF18A;
 using retrovdp::core::convertScanlinePaletteBitmapF18A;
@@ -94,6 +97,7 @@ using retrovdp::core::convertYamahaBitmap;
 using retrovdp::core::estimateConversionMemory;
 using retrovdp::core::convertGreyscaleBitmap9918;
 using retrovdp::core::convertHalfMulticolor9918;
+using retrovdp::core::convertHuC6270Background;
 using retrovdp::core::convertMulticolor9918;
 using retrovdp::core::defaultBitmap9918Palette;
 using retrovdp::core::ditherConfiguration;
@@ -1516,6 +1520,27 @@ void testConverterCancellation(TestContext &test)
         expectCancelled(convertSegaGenesisMode5(
             *genesisImage, settings, cancellationSource.token()));
     }
+
+    settings.targetProfile = TargetProfileId::HuC6270;
+    settings.mode = ConversionMode::HuC6270Background256;
+    settings.targetWidth = 256;
+    settings.targetHeight = 224;
+    if (genesisImage) {
+        expectCancelled(convertHuC6270Background(
+            *genesisImage, settings, cancellationSource.token()));
+    }
+
+    settings.targetProfile = TargetProfileId::VicII;
+    settings.mode = ConversionMode::VicIIHiresCharacter;
+    settings.targetWidth = 320;
+    settings.targetHeight = 200;
+    auto vicIIImage = RgbImage::createTightlyPacked(320, 200, PixelFormat::Rgb888);
+    test.expect(vicIIImage.has_value(),
+                "the VIC-II cancellation source should be allocated");
+    if (vicIIImage) {
+        expectCancelled(convertCommodoreDisplay(
+            *vicIIImage, settings, cancellationSource.token()));
+    }
 }
 
 void testConversionMemoryEstimate(TestContext &test)
@@ -1549,7 +1574,7 @@ void testConversionMemoryEstimate(TestContext &test)
 void testTargetProfiles(TestContext &test)
 {
     const auto profiles = retrovdp::core::targetProfiles();
-    test.expect(profiles.size() == 6,
+    test.expect(profiles.size() == 9,
                 "the registry should publish the implemented VDP profiles");
 
     const auto& tms9918 = retrovdp::core::targetProfile(TargetProfileId::Tms9918A);
@@ -1560,6 +1585,9 @@ void testTargetProfiles(TestContext &test)
         TargetProfileId::SegaMasterSystem);
     const auto& genesis = retrovdp::core::targetProfile(
         TargetProfileId::SegaGenesis);
+    const auto& huc6270 = retrovdp::core::targetProfile(TargetProfileId::HuC6270);
+    const auto& vicII = retrovdp::core::targetProfile(TargetProfileId::VicII);
+    const auto& vic = retrovdp::core::targetProfile(TargetProfileId::Vic);
     test.expect(tms9918.stableId == "tms9918a"
                     && tms9918.status == TargetProfileStatus::Implemented
                     && retrovdp::core::hasCapability(
@@ -1640,6 +1668,35 @@ void testTargetProfiles(TestContext &test)
                         TargetProfileId::SegaGenesis,
                         ConversionMode::Bitmap9918),
                 "the Genesis profile should expose native Mode V character, map, and sprite limits");
+    test.expect(huc6270.stableId == "huc6270"
+                    && huc6270.status == TargetProfileStatus::Implemented
+                    && huc6270.nominalVramBytes == 64U * 1024U
+                    && huc6270.characterPatterns.patternsPerSet == 1920
+                    && huc6270.sprites.patternsPerSet == 64
+                    && huc6270.sprites.maximumColorDepth == 4
+                    && retrovdp::core::supportsConversionMode(
+                        TargetProfileId::HuC6270,
+                        ConversionMode::HuC6270Background320),
+                "the HuC6270 profile should expose its native tile, BAT, palette, and sprite limits");
+    test.expect(vicII.stableId == "vic-ii"
+                    && vicII.status == TargetProfileStatus::Implemented
+                    && vicII.characterPatterns.mapColumns == 40
+                    && vicII.characterPatterns.mapRows == 25
+                    && vicII.sprites.patternsPerSet == 8
+                    && vicII.sprites.maximumColorDepth == 2
+                    && retrovdp::core::supportsConversionMode(
+                        TargetProfileId::VicII,
+                        ConversionMode::VicIIMulticolorBitmap)
+                    && vic.stableId == "vic"
+                    && vic.status == TargetProfileStatus::Implemented
+                    && vic.characterPatterns.mapColumns == 22
+                    && vic.characterPatterns.mapRows == 23
+                    && !retrovdp::core::hasCapability(
+                        vic.capabilities, TargetCapability::Sprites)
+                    && retrovdp::core::supportsConversionMode(
+                        TargetProfileId::Vic,
+                        ConversionMode::VicMulticolorCharacter),
+                "the VIC-II and VIC profiles should expose native character, bitmap, and sprite capabilities");
     test.expect(!retrovdp::core::supportsConversionMode(
                     TargetProfileId::Tms9918A, ConversionMode::PalettedBitmapF18A),
                 "target profiles should reject modes outside their capabilities");
@@ -1663,7 +1720,7 @@ void testTargetProfiles(TestContext &test)
                 "stable IDs should reject ambiguous separators");
 
     const auto modes = retrovdp::core::displayModes();
-    test.expect(modes.size() == 23 && retrovdp::core::validateRegistry(),
+    test.expect(modes.size() == 31 && retrovdp::core::validateRegistry(),
                 "the target and display-mode registries should validate as one contract");
     const auto& f18aMode = retrovdp::core::displayMode(
         ConversionMode::PalettedBitmapF18A);
@@ -2095,6 +2152,153 @@ void testSegaGenesisMode5Conversion(TestContext& test)
                 "the Genesis converter should reject non-native source geometry");
 }
 
+void testHuC6270Conversion(TestContext& test)
+{
+    struct ModeCase {
+        ConversionMode mode;
+        std::uint32_t width;
+        std::size_t patternBytes;
+        std::size_t mapBytes;
+    };
+    constexpr std::array cases{
+        ModeCase{ConversionMode::HuC6270Background256, 256, 0xf800, 0x0800},
+        ModeCase{ConversionMode::HuC6270Background320, 320, 0xf000, 0x1000},
+    };
+    for (const auto& modeCase : cases) {
+        auto source = RgbImage::createTightlyPacked(
+            modeCase.width, 224, PixelFormat::Rgb888);
+        test.expect(source.has_value(), "the HuC6270 test source should be allocated");
+        if (!source) continue;
+        for (std::uint32_t y = 0; y < source->height(); ++y) {
+            auto row = source->row(y);
+            for (std::uint32_t x = 0; x < source->width(); ++x) {
+                const bool light = ((x / 8U) + (y / 8U)) % 2U != 0U;
+                const std::size_t offset = static_cast<std::size_t>(x) * 3U;
+                row[offset] = light ? 255U : 0U;
+                row[offset + 1U] = light ? 128U : 0U;
+                row[offset + 2U] = light ? 64U : 0U;
+            }
+        }
+        ConversionSettings settings;
+        settings.targetProfile = TargetProfileId::HuC6270;
+        settings.mode = modeCase.mode;
+        settings.targetWidth = modeCase.width;
+        settings.targetHeight = 224;
+        settings.dither = DitherMode::None;
+        const ConversionResult result = convertHuC6270Background(*source, settings);
+        test.expect(result.succeeded() && result.preview && result.target
+                        && validateTargetTables(*result.target),
+                    "HuC6270 background conversion should compile valid native tables");
+        if (!result.target) continue;
+        const auto& tables = result.target->tables;
+        test.expect(result.target->profile == TargetProfileId::HuC6270
+                        && tables.size() == 4
+                        && tables[0].role == TargetTableRole::Pattern
+                        && tables[0].bytes.size() == modeCase.patternBytes
+                        && tables[1].role == TargetTableRole::TileMap
+                        && tables[1].bytes.size() == modeCase.mapBytes
+                        && tables[2].role == TargetTableRole::Palette
+                        && tables[2].bytes.size() == 1024
+                        && tables[3].role == TargetTableRole::DisplayRegisters
+                        && tables[3].bytes.size() == 42,
+                    "HuC6270 output should contain planar tiles, BAT, VCE colors, and VDC/VCE state");
+        const std::uint16_t batWord = static_cast<std::uint16_t>(tables[1].bytes[0])
+            | (static_cast<std::uint16_t>(tables[1].bytes[1]) << 8U);
+        test.expect((batWord & 0x0fffU) == modeCase.mapBytes / 32U,
+                    "HuC6270 BAT entries should address tiles after the in-VRAM BAT");
+    }
+
+    auto wrongSize = RgbImage::createTightlyPacked(255, 224, PixelFormat::Rgb888);
+    ConversionSettings settings;
+    settings.targetProfile = TargetProfileId::HuC6270;
+    settings.mode = ConversionMode::HuC6270Background256;
+    settings.targetWidth = 256;
+    settings.targetHeight = 224;
+    const ConversionResult invalid = convertHuC6270Background(*wrongSize, settings);
+    test.expect(!invalid.succeeded() && !invalid.diagnostics.empty()
+                    && invalid.diagnostics.front().code == "huc6270-invalid-dimensions",
+                "the HuC6270 converter should reject non-native source geometry");
+}
+
+void testCommodoreVdpConversion(TestContext& test)
+{
+    struct ModeCase {
+        ConversionMode mode;
+        TargetProfileId profile;
+        std::uint32_t width;
+        std::uint32_t height;
+        std::size_t tableCount;
+    };
+    constexpr std::array cases{
+        ModeCase{ConversionMode::VicIIHiresCharacter, TargetProfileId::VicII,
+                 320, 200, 4},
+        ModeCase{ConversionMode::VicIIMulticolorCharacter, TargetProfileId::VicII,
+                 160, 200, 4},
+        ModeCase{ConversionMode::VicIIHiresBitmap, TargetProfileId::VicII,
+                 320, 200, 3},
+        ModeCase{ConversionMode::VicIIMulticolorBitmap, TargetProfileId::VicII,
+                 160, 200, 4},
+        ModeCase{ConversionMode::VicHiresCharacter, TargetProfileId::Vic,
+                 176, 184, 4},
+        ModeCase{ConversionMode::VicMulticolorCharacter, TargetProfileId::Vic,
+                 88, 184, 4},
+    };
+    for (const auto& modeCase : cases) {
+        auto source = RgbImage::createTightlyPacked(
+            modeCase.width, modeCase.height, PixelFormat::Rgb888);
+        test.expect(source.has_value(), "the Commodore test source should be allocated");
+        if (!source) continue;
+        for (std::uint32_t y = 0; y < source->height(); ++y) {
+            auto row = source->row(y);
+            for (std::uint32_t x = 0; x < source->width(); ++x) {
+                const bool light = ((x / 4U) + (y / 4U)) % 2U != 0U;
+                const std::size_t offset = static_cast<std::size_t>(x) * 3U;
+                row[offset] = light ? 255U : 0U;
+                row[offset + 1U] = light ? 255U : 0U;
+                row[offset + 2U] = light ? 255U : 0U;
+            }
+        }
+        ConversionSettings settings;
+        settings.targetProfile = modeCase.profile;
+        settings.mode = modeCase.mode;
+        settings.targetWidth = modeCase.width;
+        settings.targetHeight = modeCase.height;
+        settings.dither = DitherMode::None;
+        const ConversionResult result = convertCommodoreDisplay(*source, settings);
+        test.expect(result.succeeded() && result.preview && result.target
+                        && validateTargetTables(*result.target),
+                    "VIC and VIC-II conversions should compile valid native tables");
+        if (!result.target) continue;
+        const auto& tables = result.target->tables;
+        test.expect(result.target->profile == modeCase.profile
+                        && result.target->palette
+                        && result.target->palette->size() == 16
+                        && tables.size() == modeCase.tableCount
+                        && tables.back().role == TargetTableRole::DisplayRegisters
+                        && tables.back().bytes.size()
+                            == (modeCase.profile == TargetProfileId::VicII ? 47U : 16U),
+                    "Commodore output should include the native register block");
+        if (modeCase.mode == ConversionMode::VicIIHiresBitmap
+            || modeCase.mode == ConversionMode::VicIIMulticolorBitmap) {
+            test.expect(tables[0].role == TargetTableRole::Framebuffer
+                            && tables[0].bytes.size() == 8000
+                            && tables[1].role == TargetTableRole::TileMap
+                            && tables[1].bytes.size() == 1000,
+                        "VIC-II bitmap modes should emit 8 KiB bitmap and 1 KiB screen memory");
+        } else {
+            const std::size_t cells = modeCase.profile == TargetProfileId::VicII
+                ? 1000U : 506U;
+            test.expect(tables[0].role == TargetTableRole::Pattern
+                            && tables[0].bytes.size() == 2048
+                            && tables[1].role == TargetTableRole::TileMap
+                            && tables[1].bytes.size() == cells
+                            && tables[2].role == TargetTableRole::Color
+                            && tables[2].bytes.size() == cells,
+                        "Commodore character modes should emit character, screen, and color memory");
+        }
+    }
+}
+
 void testTargetData(TestContext &test)
 {
     PaletteError paletteError = PaletteError::TooManyColors;
@@ -2137,6 +2341,14 @@ void testTargetData(TestContext &test)
         ConversionMode::Mode5GenesisH40,
         ConversionMode::Mode5GenesisH32Pal,
         ConversionMode::Mode5GenesisH40Pal,
+        ConversionMode::HuC6270Background256,
+        ConversionMode::HuC6270Background320,
+        ConversionMode::VicIIHiresCharacter,
+        ConversionMode::VicIIMulticolorCharacter,
+        ConversionMode::VicIIHiresBitmap,
+        ConversionMode::VicIIMulticolorBitmap,
+        ConversionMode::VicHiresCharacter,
+        ConversionMode::VicMulticolorCharacter,
     };
 
     constexpr std::array roles{
@@ -2744,6 +2956,8 @@ int main(int argc, char *argv[])
     testYamahaBitmapConversion(test);
     testSegaSmsMode4Conversion(test);
     testSegaGenesisMode5Conversion(test);
+    testHuC6270Conversion(test);
+    testCommodoreVdpConversion(test);
     testImageAdjustments(test);
     testPaletteSelection(test);
     testRgbImage(test);

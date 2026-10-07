@@ -68,11 +68,10 @@ Implemented never means that every trick, undocumented behavior, raster
 effect, or software ecosystem format is supported. Each profile publishes its
 implemented modes and asset kinds independently.
 
-## Planned target catalog
+## Target catalog
 
-Stable identifiers listed for unregistered profiles are proposals. They must
-be finalized before they appear in saved projects or recipes. The existing
-tms9918a, f18a, and v9938 identifiers must remain compatible.
+Stable identifiers listed for unregistered profiles are proposals. Registered
+implemented identifiers are persistence contracts and must remain compatible.
 
 ### TI and Yamaha lineage
 
@@ -101,7 +100,7 @@ separate descriptors, encoders, previews, and golden fixtures.
 | Nintendo Game Boy | game-boy-ppu | Picture processor | Planned | 2-bit planar tiles, tile maps, four-shade assignments, OAM sprites |
 | Nintendo Game Boy Color | game-boy-color-ppu | Picture processor | Planned | Game Boy-compatible assets plus color palettes, bank and map attributes, color OAM data |
 | Super NES 5C77/5C78 family | super-nes-ppu | Picture processor | Planned | 2/4/8-bit planar tiles, mode-described layers, CGRAM palettes, tile maps, OAM sprites |
-| NEC/Hudson HuC6270 family (PC Engine/TurboGrafx-16) | huc6270 | Video processor | Planned | 4-bit planar patterns, background attribute table, palette selection, compound sprite data |
+| NEC/Hudson HuC6270 family (PC Engine/TurboGrafx-16) | huc6270 | Video processor | Implemented | 256/320×224 4-bit planar patterns, background attribute table, 16 background palette banks, VDC/VCE state, compound sprite authoring |
 
 Game Boy and Game Boy Color are separate profiles because color palettes,
 attribute storage, and banking materially change the asset contract. They may
@@ -122,8 +121,8 @@ object metadata and pixel payloads together.
 
 | Target | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| MOS VIC-II family (Commodore 64) | vic-ii | Video processor | Planned | High-resolution and multicolor characters, bitmap modes, screen/color memory, native sprites, pixel-aspect preview |
-| MOS VIC family (VIC-20) | vic | Video processor | Planned | Character sets, screen/color memory, high-resolution and multicolor character output, pixel-aspect preview |
+| MOS VIC-II family (Commodore 64) | vic-ii | Video processor | Implemented | High-resolution and multicolor characters and bitmap modes, screen/color memory, 24×21 sprite authoring, pixel-aspect preview |
+| MOS VIC family (VIC-20) | vic | Video processor | Implemented | Character sets, screen/color memory, high-resolution and multicolor character output, pixel-aspect preview; sprites not applicable |
 
 Chip revision and television standard belong in profile variants. The first
 slice should cover documented static assets and display state. Raster-timed
@@ -385,8 +384,8 @@ shared structured-editor export work:
    implemented editor interpretation.
 2. Game Boy: 2-bit tiles, maps, palette assignments, and OAM.
 3. Game Boy Color: color palettes, attribute maps, banking, and color OAM.
-4. HuC6270: 4-bit patterns, background table, palette selection, and compound
-   sprites.
+4. HuC6270: maintain the implemented 4-bit background compiler and compound
+   sprite editor; add native structured sprite-table serialization.
 
 Shared work includes tile slicing, stable deduplication, flip reuse, palette
 bank assignment, planar wrapping, map construction, and overflow diagnostics.
@@ -409,8 +408,10 @@ not expose every bit depth, layer count, and color rule simultaneously.
 
 ### Wave 5: character and wide-pixel systems
 
-1. VIC-II documented character and bitmap modes, followed by native sprites.
-2. VIC character and multicolor modes.
+1. VIC-II: maintain the implemented character/bitmap compilers and 24×21
+   sprite editor; add native structured sprite-table serialization.
+2. VIC: maintain the implemented high-resolution and multicolor character
+   modes; sprites remain not applicable.
 3. Amstrad CPC Modes 0, 1, and 2 with shared wide-pixel quantization and a
    dedicated screen-memory writer.
 
