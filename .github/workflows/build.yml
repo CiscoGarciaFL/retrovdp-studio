@@ -2,6 +2,8 @@ name: Build and test
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -26,7 +28,7 @@ jobs:
             os: windows-latest
             compiler: g++
           - name: Ubuntu (GCC x64)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             compiler: g++
           - name: macOS (AppleClang Intel)
             os: macos-15-intel

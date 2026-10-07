@@ -363,11 +363,11 @@ MediaExtractionResult extractMediaClip(const MediaExtractionRequest& request,
         const auto pts = request.startMicroseconds + frameOffset;
         const auto frameDuration = std::min(nextFrameOffset, duration) - frameOffset;
         frames.push_back(QJsonObject{
-            {QStringLiteral("ordinal"), ordinal},
-            {QStringLiteral("number"), ordinal + 1},
+            {QStringLiteral("ordinal"), static_cast<qint64>(ordinal)},
+            {QStringLiteral("number"), static_cast<qint64>(ordinal + 1)},
             {QStringLiteral("file"), QStringLiteral("frames/%1").arg(frameFiles[index])},
-            {QStringLiteral("ptsUs"), pts},
-            {QStringLiteral("durationUs"), frameDuration},
+            {QStringLiteral("ptsUs"), static_cast<qint64>(pts)},
+            {QStringLiteral("durationUs"), static_cast<qint64>(frameDuration)},
         });
     }
     QJsonObject audio;
@@ -377,8 +377,8 @@ MediaExtractionResult extractMediaClip(const MediaExtractionRequest& request,
             {QStringLiteral("file"), relativeAudioPath},
             {QStringLiteral("format"), audioFormatName(request.audioFormat)},
             {QStringLiteral("sourceStream"), selectedAudio->index},
-            {QStringLiteral("startUs"), request.startMicroseconds},
-            {QStringLiteral("durationUs"), duration},
+            {QStringLiteral("startUs"), static_cast<qint64>(request.startMicroseconds)},
+            {QStringLiteral("durationUs"), static_cast<qint64>(duration)},
         };
     }
     const QJsonObject root{
@@ -390,8 +390,8 @@ MediaExtractionResult extractMediaClip(const MediaExtractionRequest& request,
             {QStringLiteral("format"), QString::fromStdString(request.timeline->formatName)},
         }},
         {QStringLiteral("range"), QJsonObject{
-            {QStringLiteral("startUs"), request.startMicroseconds},
-            {QStringLiteral("durationUs"), duration},
+            {QStringLiteral("startUs"), static_cast<qint64>(request.startMicroseconds)},
+            {QStringLiteral("durationUs"), static_cast<qint64>(duration)},
         }},
         {QStringLiteral("extraction"), QJsonObject{
             {QStringLiteral("videoStream"), selectedVideo->index},
