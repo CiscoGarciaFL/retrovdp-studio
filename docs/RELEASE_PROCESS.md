@@ -193,7 +193,7 @@ The current source uses `CiscoGarciaFL` and `RetroVDPStudio` for Qt settings
 identity. The GUI, CLI, packages, and release workflow derive their version
 from `RETROVDP_VERSION` in the root `CMakeLists.txt`.
 
-## Planned release assets
+## Required release assets
 
 `<version>` below is the semantic version without the leading tag `v`.
 
@@ -205,8 +205,8 @@ from `RETROVDP_VERSION` in the root `CMakeLists.txt`.
 | macOS Intel | `RetroVDPStudio-<version>-macOS-x86_64.dmg` | Signed and notarized drag-to-Applications GUI bundle. |
 | Linux x64 | `RetroVDPStudio-<version>-Linux-x86_64.AppImage` | Primary portable GUI package. |
 | Debian/Ubuntu x64 | `retrovdp-studio_<version>_amd64.deb` | Isolated package with its bundled runtime under `/opt/retrovdp-studio` plus launchers, desktop integration, documentation, and declared base-system dependencies. |
-| Linux ARM64 (future) | `RetroVDPStudio-<version>-Linux-aarch64.AppImage` | Native AArch64 portable GUI package, added only after the ARM64 acceptance gates pass. |
-| Debian/Ubuntu ARM64 (future) | `retrovdp-studio_<version>_arm64.deb` | Native ARM64 package using the same private `/opt/retrovdp-studio` runtime boundary as the x64 package. |
+| Linux ARM64 | `RetroVDPStudio-<version>-Linux-aarch64.AppImage` | Native AArch64 portable GUI package. |
+| Debian/Ubuntu ARM64 | `retrovdp-studio_<version>_arm64.deb` | Native ARM64 package using the same private `/opt/retrovdp-studio` runtime boundary as the x64 package. |
 | All binary releases | `SHA256SUMS.txt` | Digest of every published binary artifact. |
 
 Intel and Apple Silicon DMGs are separate initially because both architectures
@@ -229,11 +229,11 @@ and QML modules under `/opt/retrovdp-studio`. The macOS DMG and Linux AppImage
 focus on the GUI; matching, versioned CLI archives may be attached when
 terminal installation instructions and architecture coverage are finalized.
 
-Linux ARM64/AArch64 is a planned expansion, not part of the first supported
-Linux release. ARM32/armhf, 32-bit Windows, and other architectures are not
-implied by that plan. Every additional architecture requires an explicit
-native build, package, dependency audit, and clean-system test matrix before
-release notes call it supported.
+Linux ARM64/AArch64 is supported through native builds and package tests on
+Ubuntu 22.04 and 24.04 ARM64 runners. ARM32/armhf, 32-bit Windows, and other
+architectures are not implied by that support. Every additional architecture
+requires an explicit native build, package, dependency audit, and clean-system
+test matrix before release notes call it supported.
 
 ## Package contents
 
@@ -304,40 +304,26 @@ an AppImage tool selected and pinned during implementation and a separate,
 narrowly scoped Debian builder with a release-blocking filesystem-layout
 audit. Packaging tool versions are pinned in release automation.
 
-### Linux ARM64 expansion
+### Linux ARM64 implementation
 
-The present Linux packaging method can be extended to ARM64 without changing
-the private-runtime design. The application is portable C++/Qt, the current
-pinned linuxdeploy and Qt plugin releases publish `aarch64` tools, GitHub
-provides native Ubuntu ARM64 runners, and Qt's installer supports the
-`linux_arm64` host with the `linux_gcc_arm64` architecture. The current
-workflow is nevertheless x86-64-only: it selects x86-64 runners and
-linuxdeploy tools, writes `Architecture: amd64`, names only x86-64/amd64
-assets, and verifies a fixed x64 asset set.
+Linux ARM64 uses the same private-runtime design as x86-64. The release matrix
+builds and tests natively on a pinned Ubuntu 22.04 ARM64 runner with Qt's
+`linux_arm64` host and `linux_gcc_arm64` architecture. It packages with the
+pinned `linuxdeploy-aarch64.AppImage` and
+`linuxdeploy-plugin-qt-aarch64.AppImage` tools, emits an `aarch64` AppImage and
+an `Architecture: arm64` Debian archive, and includes both in the final asset
+manifest and checksum file.
 
-ARM64 release work must:
+The ARM64 package job applies the same staged-runtime, dependency,
+filesystem-isolation, installed GUI/CLI, uninstall-cleanup, and host-integrity
+checks as x86-64. A separate Ubuntu 24.04 ARM64 job downloads those completed
+artifacts, extracts and audits every ELF machine type, launches the AppImage,
+installs and launches the Debian package, and removes it again. This provides
+native testing on both the glibc 2.34 baseline and a current Ubuntu target.
 
-1. add a native, pinned Ubuntu ARM64 build-and-test job rather than assembling
-   an ARM package from x86-64 Qt files;
-2. install the matching Qt ARM64 desktop runtime and use the pinned
-   `linuxdeploy-aarch64.AppImage` and
-   `linuxdeploy-plugin-qt-aarch64.AppImage` tools;
-3. parameterize Debian `Architecture`, tool selection, artifact names, and the
-   final release manifest so `amd64` and `arm64` cannot be confused;
-4. preserve the same Debian filesystem isolation, forbidden-path audit,
-   installed GUI/CLI smoke tests, uninstall cleanup, and host-Qt integrity
-   checks for both architectures;
-5. audit ELF machine types and dynamic dependencies so every bundled binary
-   and library is AArch64 and no x86-64 artifact crosses into the package; and
-6. pass clean ARM64 testing on the oldest declared distribution and at least
-   one current target, including a real or virtual ARM64 graphical system and
-   each display backend claimed in the release notes.
-
-The x64 `glibc 2.34` promise does not automatically apply to ARM64. Start with
-an Ubuntu 22.04 ARM64 runner to pursue the same baseline, then verify the
-actual Qt ARM64 binaries and every bundled dependency. If the selected Qt
-binary distribution requires a newer glibc, either build Qt against the older
-baseline or declare, test, and document a newer ARM64 minimum separately. See
+Every new Linux architecture must extend the native runner matrix, Debian
+architecture metadata, AppImage tooling, ELF audit, artifact manifest, and
+two-environment package tests before it is called supported. See
 [GitHub-hosted runner images](https://docs.github.com/en/enterprise-cloud@latest/actions/reference/runners/github-hosted-runners),
 [install-qt-action](https://github.com/jurplel/install-qt-action),
 [aqtinstall platform support](https://github.com/miurahr/aqtinstall/blob/master/docs/getting_started.rst),
@@ -496,10 +482,11 @@ configuration and plugin discovery after installation and reboot/logout.
 
 ## Supported-system policy
 
-The first beta supports Windows 10 version 1809 or newer on x64, macOS 13 or
-newer on Intel x86_64 and Apple Silicon arm64, and Linux x86_64 with glibc 2.34
-or newer. Ubuntu 22.04 is the pinned Linux build and package-test baseline. X11
-is the automated Linux display-test target. The application itself launched
+The beta supports Windows 10 version 1809 or newer on x64, macOS 13 or newer
+on Intel x86_64 and Apple Silicon arm64, and Linux x86_64 and ARM64 with glibc
+2.34 or newer. Ubuntu 22.04 is the pinned Linux build and package-test
+baseline, with Ubuntu 24.04 providing a second ARM64 package test. X11 is the
+automated Linux display-test target. The application itself launched
 successfully during a Kubuntu/Wayland test, but the beta.1 Debian package later
 prevented SDDM from starting its greeter after reboot. Kubuntu/Wayland is not a
 verified Debian installation environment again until the isolated beta.3
@@ -511,9 +498,8 @@ or arm64 baseline are required.
 
 The CI operating system used to produce a Linux release is pinned rather than
 `ubuntu-latest`; it must be old enough for the declared compatibility target.
-The macOS deployment target is explicit in CMake. Packages are tested on the
-oldest supported system and at least one current system. Until the ARM64 gates
-above pass, Linux support and release notes remain explicitly x86-64-only.
+The macOS deployment target is explicit in CMake. ARM64 packages are tested on
+both the oldest supported Ubuntu baseline and a current Ubuntu release.
 
 ## Clean-system acceptance tests
 
@@ -591,15 +577,16 @@ version supported.
 
 ## Current implementation status
 
-The repository builds and tests Release code on Windows, Ubuntu 22.04, Intel
-macOS, and Apple Silicon macOS. CMake owns the version and frozen application
+The repository builds and tests Release code on Windows, Ubuntu x86_64,
+Ubuntu ARM64, Intel macOS, and Apple Silicon macOS. CMake owns the version and frozen application
 identities, stages the GUI, CLI, notices, exact LGPL/GPL texts, Qt/QML modules,
 plugins, and runtime dependencies, and supplies CPack metadata. The tag-driven
-release workflow builds Windows setup/portable, Linux AppImage/DEB, and native
-Intel and Apple Silicon DMG assets, audits staged contents and dependencies,
-runs GUI and representative CLI package smoke tests, verifies the complete
-asset set, generates SHA-256 checksums, and publishes an immutable GitHub
-prerelease.
+release workflow builds Windows setup/portable, native x86_64 and AArch64
+Linux AppImage/DEB packages, and native Intel and Apple Silicon DMG assets. It
+audits staged contents, dependencies, and Linux ELF architectures, runs GUI
+and representative CLI package smoke tests, re-tests ARM64 packages on Ubuntu
+24.04, verifies the complete asset set, generates SHA-256 checksums, and
+publishes an immutable GitHub prerelease.
 
 The Windows portable tree has also passed the package audit and GUI/CLI smoke
 test locally. Feedback from `v0.1.0-beta.1` identified a Windows GUI-subsystem
@@ -614,9 +601,8 @@ item is a recorded clean-Kubuntu install plus reboot/logout, SDDM login, GUI/CLI
 launch, and removal test. The notification-only update checker remains optional
 for a later prerelease, and automatic installation remains intentionally
 deferred. Stable Windows and macOS publication still requires the signing and
-notarization gates described above. AppStream/software-center metadata and the
-native Linux ARM64 workflow are documented future work; no current Linux asset
-or support statement implies ARM64 compatibility.
+notarization gates described above. AppStream/software-center metadata remains
+future work.
 
 ## Release-process completion definition
 

@@ -134,15 +134,44 @@ jobs:
           if-no-files-found: error
 
   linux:
-    name: Linux x64 packages
+    name: Linux ${{ matrix.display_arch }} packages
     needs: validate
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            display_arch: x86_64
+            uname_arch: x86_64
+            qt_host: linux
+            qt_arch: linux_gcc_64
+            tool_arch: x86_64
+            asset_arch: x86_64
+            deb_arch: amd64
+            artifact_arch: x64
+            elf_arch: x86_64
+          - runner: ubuntu-22.04-arm
+            display_arch: ARM64
+            uname_arch: aarch64
+            qt_host: linux_arm64
+            qt_arch: linux_gcc_arm64
+            tool_arch: aarch64
+            asset_arch: aarch64
+            deb_arch: arm64
+            artifact_arch: arm64
+            elf_arch: aarch64
     env:
       CXX: g++
       RELEASE_VERSION: ${{ needs.validate.outputs.version }}
       APPIMAGE_EXTRACT_AND_RUN: "1"
       QML_SOURCES_PATHS: ${{ github.workspace }}/app/qml
+      EXPECTED_UNAME_ARCH: ${{ matrix.uname_arch }}
+      LINUXDEPLOY_ARCH: ${{ matrix.tool_arch }}
+      ASSET_ARCH: ${{ matrix.asset_arch }}
+      DEB_ARCH: ${{ matrix.deb_arch }}
+      EXPECTED_ELF_ARCH: ${{ matrix.elf_arch }}
     steps:
       - name: Check out release tag
         uses: actions/checkout@v7
@@ -156,10 +185,17 @@ jobs:
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 xvfb
 
+      - name: Verify native build architecture
+        run: |
+          test "$(uname -m)" = "${EXPECTED_UNAME_ARCH}"
+          test "$(dpkg --print-architecture)" = "${DEB_ARCH}"
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
+          host: ${{ matrix.qt_host }}
+          arch: ${{ matrix.qt_arch }}
           cache: true
 
       - name: Configure, build, and test
@@ -177,17 +213,19 @@ jobs:
       - name: Download pinned AppImage tooling
         run: |
           curl --fail --location --retry 3 \
-            --output linuxdeploy-x86_64.AppImage \
-            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+            --output "linuxdeploy-${LINUXDEPLOY_ARCH}.AppImage" \
+            "https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-${LINUXDEPLOY_ARCH}.AppImage"
           curl --fail --location --retry 3 \
-            --output linuxdeploy-plugin-qt-x86_64.AppImage \
-            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+            --output "linuxdeploy-plugin-qt-${LINUXDEPLOY_ARCH}.AppImage" \
+            "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-${LINUXDEPLOY_ARCH}.AppImage"
+          chmod +x \
+            "linuxdeploy-${LINUXDEPLOY_ARCH}.AppImage" \
+            "linuxdeploy-plugin-qt-${LINUXDEPLOY_ARCH}.AppImage"
 
       - name: Deploy Linux runtime and build AppImage
         run: |
           mkdir -p dist
-          ./linuxdeploy-x86_64.AppImage \
+          "./linuxdeploy-${LINUXDEPLOY_ARCH}.AppImage" \
             --appdir AppDir \
             --executable AppDir/usr/bin/RetroVDPStudio \
             --desktop-file AppDir/usr/share/applications/io.github.ciscogarciafl.RetroVDPStudio.desktop \
@@ -197,10 +235,12 @@ jobs:
           generated_appimage="$(find . -maxdepth 1 -name '*.AppImage' ! -name 'linuxdeploy*' -print -quit)"
           test -n "${generated_appimage}"
           mv "${generated_appimage}" \
-            "dist/RetroVDPStudio-${RELEASE_VERSION}-Linux-x86_64.AppImage"
+            "dist/RetroVDPStudio-${RELEASE_VERSION}-Linux-${ASSET_ARCH}.AppImage"
 
       - name: Audit and smoke-test deployed Linux tree
         run: |
+          bash tools/audit-elf-architecture.sh \
+            "${PWD}/AppDir/usr" "${EXPECTED_ELF_ARCH}"
           cmake -D ROOT="${PWD}/AppDir/usr" \
             -D GUI_REL=bin/RetroVDPStudio \
             -D CLI_REL=bin/retrovdp-cli \
@@ -213,23 +253,28 @@ jobs:
             -D OUTPUT_DIR="${PWD}/smoke-output" \
             -D VERSION="${RELEASE_VERSION}" \
             -P tools/smoke_test_package.cmake
-          xvfb-run -a "dist/RetroVDPStudio-${RELEASE_VERSION}-Linux-x86_64.AppImage" --smoke-test
+          xvfb-run -a \
+            "dist/RetroVDPStudio-${RELEASE_VERSION}-Linux-${ASSET_ARCH}.AppImage" \
+            --smoke-test
           ldd AppDir/usr/bin/RetroVDPStudio | tee gui-dependencies.txt
           ! grep -q "not found" gui-dependencies.txt
 
       - name: Build and install-test Debian package
         run: |
-          deb="dist/retrovdp-studio_${RELEASE_VERSION}_amd64.deb"
+          deb="dist/retrovdp-studio_${RELEASE_VERSION}_${DEB_ARCH}.deb"
           bash packaging/linux/build-isolated-deb.sh \
             "${PWD}/AppDir/usr" "${PWD}/DebRoot" \
-            "${RELEASE_VERSION}" "${PWD}/${deb}"
+            "${RELEASE_VERSION}" "${DEB_ARCH}" "${PWD}/${deb}"
 
+          bash tools/audit-elf-architecture.sh \
+            "${PWD}/DebRoot/opt/retrovdp-studio" "${EXPECTED_ELF_ARCH}"
           cmake -D ROOT="${PWD}/DebRoot/opt/retrovdp-studio" \
             -D GUI_REL=bin/RetroVDPStudio \
             -D CLI_REL=bin/retrovdp-cli \
             -D PLATFORM=linux -D REQUIRE_QT_LICENSES=ON \
             -P tools/audit_package.cmake
           cmake -D ROOT="${PWD}/DebRoot" \
+            -D EXPECTED_DEB_ARCH="${DEB_ARCH}" \
             -P tools/audit_debian_layout.cmake
           xvfb-run -a cmake \
             -D ROOT="${PWD}/DebRoot/opt/retrovdp-studio" \
@@ -243,6 +288,7 @@ jobs:
           test "$(stat -c '%a' "${deb}")" = 644
           installed_size="$(dpkg-deb -f "${deb}" Installed-Size)"
           [[ "${installed_size}" =~ ^[1-9][0-9]*$ ]]
+          test "$(dpkg-deb -f "${deb}" Architecture)" = "${DEB_ARCH}"
           dpkg-deb --contents "${deb}" > deb-contents.txt
           ! grep -Eq \
             '[.]/usr/bin/qt[.]conf$|[.]/usr/(plugins|qml)(/|$)|[.]/apprun-hooks(/|$)|[.]/usr/lib/lib(Qt|xcb|X11)' \
@@ -278,12 +324,68 @@ jobs:
       - name: Upload Linux release assets
         uses: actions/upload-artifact@v4
         with:
-          name: release-linux-x64
+          name: release-linux-${{ matrix.artifact_arch }}
           path: |
             dist/*.AppImage
             dist/*.deb
           compression-level: 0
           if-no-files-found: error
+
+  linux_arm64_current:
+    name: Linux ARM64 packages on Ubuntu 24.04
+    needs: [validate, linux]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      APPIMAGE_EXTRACT_AND_RUN: "1"
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Download ARM64 release assets
+        uses: actions/download-artifact@v5
+        with:
+          name: release-linux-arm64
+          path: dist
+
+      - name: Install runtime prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgl1 libxkbcommon-x11-0 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 xvfb
+
+      - name: Audit and smoke-test AppImage
+        run: |
+          appimage="dist/RetroVDPStudio-${RELEASE_VERSION}-Linux-aarch64.AppImage"
+          test "$(uname -m)" = aarch64
+          test "$(dpkg --print-architecture)" = arm64
+          test -s "${appimage}"
+          chmod +x "${appimage}"
+          "${appimage}" --appimage-extract >/dev/null
+          bash tools/audit-elf-architecture.sh \
+            "${PWD}/squashfs-root/usr" aarch64
+          xvfb-run -a "${appimage}" --smoke-test
+
+      - name: Audit, install-test, and remove Debian package
+        run: |
+          deb="dist/retrovdp-studio_${RELEASE_VERSION}_arm64.deb"
+          test -s "${deb}"
+          test "$(dpkg-deb -f "${deb}" Architecture)" = arm64
+          mkdir -p deb-current
+          dpkg-deb --extract "${deb}" deb-current
+          bash tools/audit-elf-architecture.sh \
+            "${PWD}/deb-current/opt/retrovdp-studio" aarch64
+          sudo apt-get install --yes "./${deb}"
+          xvfb-run -a /usr/bin/RetroVDPStudio --smoke-test
+          /usr/bin/retrovdp-cli --version | grep "${RELEASE_VERSION}"
+          sudo apt-get remove --yes retrovdp-studio
+          test ! -e /opt/retrovdp-studio
+          test ! -e /usr/bin/RetroVDPStudio
+          test ! -e /usr/bin/retrovdp-cli
 
   macos:
     name: macOS ${{ matrix.arch }} package
@@ -395,7 +497,7 @@ jobs:
 
   publish:
     name: Publish GitHub prerelease
-    needs: [validate, windows, linux, macos]
+    needs: [validate, windows, linux, linux_arm64_current, macos]
     runs-on: ubuntu-22.04
     env:
       RELEASE_VERSION: ${{ needs.validate.outputs.version }}
@@ -420,6 +522,8 @@ jobs:
             "RetroVDPStudio-${RELEASE_VERSION}-Windows-x64-Portable.zip"
             "RetroVDPStudio-${RELEASE_VERSION}-Linux-x86_64.AppImage"
             "retrovdp-studio_${RELEASE_VERSION}_amd64.deb"
+            "RetroVDPStudio-${RELEASE_VERSION}-Linux-aarch64.AppImage"
+            "retrovdp-studio_${RELEASE_VERSION}_arm64.deb"
             "RetroVDPStudio-${RELEASE_VERSION}-macOS-x86_64.dmg"
             "RetroVDPStudio-${RELEASE_VERSION}-macOS-arm64.dmg"
           )

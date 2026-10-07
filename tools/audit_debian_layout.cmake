@@ -42,6 +42,11 @@ file(READ "${package_root}/DEBIAN/control" control)
 if(NOT control MATCHES "Installed-Size: ([1-9][0-9]*)")
     message(FATAL_ERROR "Debian control file has no positive Installed-Size")
 endif()
+if(DEFINED EXPECTED_DEB_ARCH AND
+   NOT control MATCHES "Architecture: ${EXPECTED_DEB_ARCH}([\r\n]|$)")
+    message(FATAL_ERROR
+        "Debian control file does not declare ${EXPECTED_DEB_ARCH}")
+endif()
 
 file(READ "${package_root}/usr/bin/RetroVDPStudio" gui_launcher)
 if(NOT gui_launcher MATCHES
