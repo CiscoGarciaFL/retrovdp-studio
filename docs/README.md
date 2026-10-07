@@ -17,7 +17,9 @@ completed phase checklist from competing with the current architecture plan.
 | [TARGET_IMPLEMENTATION_GUIDE.md](TARGET_IMPLEMENTATION_GUIDE.md) | Required Screen Image, Character, and Sprite accounting for every target, including approximation and disablement rules |
 | [VDP_SUPPORT_ROADMAP.md](VDP_SUPPORT_ROADMAP.md) | Planned hardware catalog, target families, and per-target acceptance policy |
 | [VDP_DESIGN_TOOLS.md](VDP_DESIGN_TOOLS.md) | Character, pattern, sprite/object, allocation, and hardware-editor behavior |
-| [BATCH_MODE.md](BATCH_MODE.md) | Deferred frame-sequence feature contract; not currently implemented |
+| [BATCH_MODE.md](BATCH_MODE.md) | Active synchronized media-sequence contract for video, audio, mappings, extraction, playback, and batch conversion |
+| [CLIP_MAPS.md](CLIP_MAPS.md) | Implemented clip-map schema, CSV/TSV and Daphne/Hypseus adapters, CLI, and engine loaders |
+| [FFMPEG_SETUP.md](FFMPEG_SETUP.md) | Cross-platform setup and validation guide for the external FFmpeg/FFprobe tools |
 
 Implementation ordering comes only from the architecture implementation plan.
 Feature documents may state prerequisites and acceptance criteria, but should

@@ -2,6 +2,8 @@ name: Build and test
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -28,7 +30,7 @@ jobs:
             qt_host: ""
             qt_arch: ""
           - name: Ubuntu (GCC x64)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             compiler: g++
             qt_host: ""
             qt_arch: ""

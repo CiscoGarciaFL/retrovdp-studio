@@ -22,6 +22,8 @@ ApplicationWindow {
     property bool screenImageEditingActive: false
     property bool conversionPanelVisible: appPreferences.sidePanelVisible
     property int conversionPanelMode: appPreferences.sidePanelMode
+    property bool mediaWorkspaceVisible: mediaClip.clipLoaded
+    property url pendingMediaRecipe
 
     function synchronizeConversionPanel() {
         if (conversionPanelMode === 1 && conversionPanelVisible)
@@ -94,6 +96,49 @@ ApplicationWindow {
             qsTr("All files (*)")
         ]
         onAccepted: imageInput.openUrl(selectedFile)
+    }
+
+    FileDialog {
+        id: openMediaClipDialog
+        objectName: "openMediaClipDialog"
+        title: qsTr("Open media clip package")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("RetroVDP clip metadata (clip.json)"),
+                      qsTr("JSON files (*.json)"), qsTr("All files (*)")]
+        onAccepted: {
+            if (mediaClip.openClipUrl(selectedFile))
+                window.mediaWorkspaceVisible = true
+        }
+    }
+
+    FileDialog {
+        id: mediaRecipeDialog
+        objectName: "mediaRecipeDialog"
+        title: qsTr("Choose conversion recipe")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("RetroVDP Studio recipes (*.rvdp.json *.json)"),
+                      qsTr("All files (*)")]
+        onAccepted: {
+            window.pendingMediaRecipe = selectedFile
+            mediaOutputParentDialog.open()
+        }
+    }
+
+    FolderDialog {
+        id: mediaOutputParentDialog
+        objectName: "mediaOutputParentDialog"
+        title: qsTr("Choose parent folder for the target run")
+        onAccepted: mediaBatch.startConversion(
+            window.pendingMediaRecipe, selectedFolder,
+            mediaClip.clipName + "-target-run")
+    }
+
+    Connections {
+        target: mediaBatch
+        function onConversionFinished() {
+            if (mediaClip.openClipUrl(mediaBatch.outputManifestUrl))
+                window.mediaWorkspaceVisible = true
+        }
     }
 
     FolderDialog {
@@ -204,6 +249,13 @@ ApplicationWindow {
         text: qsTr("Open &Source…")
         shortcut: "Ctrl+O"
         onTriggered: openDialog.open()
+    }
+    Action {
+        id: openMediaClipAction
+        objectName: "openMediaClipAction"
+        text: qsTr("Open Media &Clip…")
+        shortcut: "Ctrl+Alt+O"
+        onTriggered: openMediaClipDialog.open()
     }
     Action {
         id: pasteAction
@@ -376,6 +428,7 @@ ApplicationWindow {
             MenuItem { action: projectSettingsAction }
             MenuSeparator {}
             MenuItem { action: openAction }
+            MenuItem { action: openMediaClipAction }
             MenuItem {
                 objectName: "reloadMenuItem"
                 action: reloadAction
@@ -533,6 +586,7 @@ ApplicationWindow {
         }
 
         RowLayout {
+            visible: !window.mediaWorkspaceVisible
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 12
@@ -565,6 +619,23 @@ ApplicationWindow {
                     onExportRequested: exportDialog.open()
                 }
             }
+        }
+
+        MediaClipWorkspace {
+            objectName: "mediaClipWorkspace"
+            visible: window.mediaWorkspaceVisible
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            onCloseRequested: {
+                mediaClip.pause()
+                window.mediaWorkspaceVisible = false
+            }
+            onFrameOpenRequested: frameUrl => {
+                mediaClip.pause()
+                imageInput.openUrl(frameUrl)
+                window.mediaWorkspaceVisible = false
+            }
+            onConvertRequested: mediaRecipeDialog.open()
         }
     }
 
@@ -660,7 +731,8 @@ ApplicationWindow {
                 objectName: "statusSourceName"
                 visible: text.length > 0
                 Layout.maximumWidth: Math.max(120, window.width * 0.4)
-                text: imageInput.sourceName
+                text: window.mediaWorkspaceVisible
+                      ? mediaClip.clipName : imageInput.sourceName
                 elide: Text.ElideMiddle
                 Accessible.name: qsTr("Source file: %1").arg(text)
                 ToolTip.visible: sourceNameHover.hovered && truncated
@@ -676,20 +748,31 @@ ApplicationWindow {
             Label {
                 id: statusLabel
                 Layout.fillWidth: true
-                text: editorProject.errorMessage.length > 0
-                      ? editorProject.errorMessage
+                text: mediaBatch.errorMessage.length > 0
+                      ? mediaBatch.errorMessage
+                      : mediaBatch.statusMessage.length > 0
+                        ? mediaBatch.statusMessage
+                      : mediaClip.errorMessage.length > 0
+                      ? mediaClip.errorMessage
+                      : window.mediaWorkspaceVisible
+                        && mediaClip.statusMessage.length > 0
+                        ? mediaClip.statusMessage
+                      : editorProject.errorMessage.length > 0
+                        ? editorProject.errorMessage
                       : editorProject.statusMessage.length > 0
                         ? editorProject.statusMessage
                         : imageInput.errorMessage.length > 0
                           ? imageInput.errorMessage : imageInput.statusMessage
-                color: editorProject.errorMessage.length > 0
+                color: mediaBatch.errorMessage.length > 0
+                       || mediaClip.errorMessage.length > 0
+                       || editorProject.errorMessage.length > 0
                        || imageInput.errorMessage.length > 0
                        ? "#ff8f8f" : palette.text
                 wrapMode: Text.WordWrap
                 Accessible.name: text
             }
             BusyIndicator {
-                running: imageInput.busy
+                running: imageInput.busy || mediaBatch.busy
                 visible: running
                 implicitWidth: 24
                 implicitHeight: 24

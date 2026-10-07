@@ -1,13 +1,29 @@
 add_library(retrovdp_app_support STATIC
     AppPreferencesController.cpp
     AppPreferencesController.hpp
+    ClipMapAdapter.cpp
+    ClipMapAdapter.hpp
     ConversionPipeline.cpp
     ConversionPipeline.hpp
+    ConversionRecipe.cpp
+    ConversionRecipe.hpp
     EditorProjectController.cpp
     EditorProjectControllerSprite.cpp
     EditorProjectController.hpp
     ImageInputController.cpp
     ImageInputController.hpp
+    MediaToolDiscovery.cpp
+    MediaToolDiscovery.hpp
+    MediaProbe.cpp
+    MediaProbe.hpp
+    MediaExtraction.cpp
+    MediaExtraction.hpp
+    MediaClipController.cpp
+    MediaClipController.hpp
+    MediaBatchConversion.cpp
+    MediaBatchConversion.hpp
+    MediaBatchController.cpp
+    MediaBatchController.hpp
 )
 
 # Keep Qt's autogen subprocess count conservative on Windows developer hosts.
@@ -21,8 +37,10 @@ target_include_directories(retrovdp_app_support
 target_link_libraries(retrovdp_app_support
     PUBLIC
         retrovdp_core
+        retrovdp_media
         retrovdp_imageio
         Qt6::Core
+        Qt6::Concurrent
         Qt6::Gui
 )
 
@@ -52,6 +70,7 @@ qt_add_qml_module(RetroVDPStudio
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/MediaClipWorkspace.qml
         qml/PreferencesDialog.qml
         qml/ProjectDialog.qml
         qml/PreviewPane.qml

@@ -1,6 +1,8 @@
 #include "AppPreferencesController.hpp"
 #include "EditorProjectController.hpp"
 #include "ImageInputController.hpp"
+#include "MediaClipController.hpp"
+#include "MediaBatchController.hpp"
 
 #include <QCoreApplication>
 #include <QColor>
@@ -1234,7 +1236,13 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
                     && !preferences.rememberWorkspaceMode()
                     && preferences.rememberConversionSettings()
                     && preferences.defaultPreset() == 0
-                    && preferences.defaultExportFormat() == 0,
+                    && preferences.defaultExportFormat() == 0
+                    && preferences.conversionWorkers() == 0
+                    && preferences.availableConversionWorkers() >= 1
+                    && preferences.automaticConversionWorkers() >= 1
+                    && preferences.ffmpegPath().isEmpty()
+                    && preferences.ffprobePath().isEmpty()
+                    && !preferences.mediaToolsReady(),
                 "application preferences should begin with documented interface, behavior, and default values");
 
     preferences.setPreviewLayout(2);
@@ -1246,6 +1254,10 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
     preferences.setRememberConversionSettings(false);
     preferences.setDefaultPreset(3);
     preferences.setDefaultExportFormat(8);
+    const int requestedWorkers = std::min(2, preferences.availableConversionWorkers());
+    preferences.setConversionWorkers(requestedWorkers);
+    preferences.setFfmpegPath(QStringLiteral("configured-ffmpeg"));
+    preferences.setFfprobePath(QStringLiteral("configured-ffprobe"));
     preferences.saveWindowGeometry(80, 60, 1180, 740);
 
     AppPreferencesController restored(&controller);
@@ -1258,6 +1270,9 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
                     && !restored.rememberConversionSettings()
                     && restored.defaultPreset() == 3
                     && restored.defaultExportFormat() == 8
+                    && restored.conversionWorkers() == requestedWorkers
+                    && restored.ffmpegPath() == QStringLiteral("configured-ffmpeg")
+                    && restored.ffprobePath() == QStringLiteral("configured-ffprobe")
                     && restored.hasWindowGeometry()
                     && restored.windowX() == 80 && restored.windowY() == 60
                     && restored.windowWidth() == 1180
@@ -1272,6 +1287,7 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
                     && !restored.rememberWorkspaceMode()
                     && !restored.hasWindowGeometry()
                     && !restored.rememberConversionSettings()
+                    && restored.conversionWorkers() == requestedWorkers
                     && restored.defaultPreset() == 3,
                 "Reset Interface should reset only the interface preference section");
 
@@ -1280,6 +1296,7 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
     restored.resetBehaviorSettings();
     test.expect(controller.autoUpdate() && !controller.livePreview()
                     && restored.rememberConversionSettings()
+                    && restored.conversionWorkers() == 0
                     && restored.defaultPreset() == 3,
                 "Reset Behavior should restore update, preview, and conversion-memory behavior without changing defaults");
 
@@ -1287,6 +1304,12 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
     test.expect(restored.defaultPreset() == 0
                     && restored.defaultExportFormat() == 0,
                 "Reset Defaults should restore only startup conversion and export defaults");
+
+    restored.resetMediaToolSettings();
+    test.expect(restored.ffmpegPath().isEmpty()
+                    && restored.ffprobePath().isEmpty()
+                    && !restored.mediaToolsReady(),
+                "Reset Media Tools should restore automatic executable detection");
 
     restored.setRememberConversionSettings(false);
     restored.setDefaultPreset(1);
@@ -2237,11 +2260,15 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
 
     AppPreferencesController appPreferences(&controller);
     EditorProjectController editorProject(&controller);
+    MediaClipController mediaClip;
+    MediaBatchController mediaBatch(&mediaClip, &appPreferences);
     editorProject.setActiveTarget(0);
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("imageInput"), &controller);
     engine.rootContext()->setContextProperty(QStringLiteral("appPreferences"), &appPreferences);
     engine.rootContext()->setContextProperty(QStringLiteral("editorProject"), &editorProject);
+    engine.rootContext()->setContextProperty(QStringLiteral("mediaClip"), &mediaClip);
+    engine.rootContext()->setContextProperty(QStringLiteral("mediaBatch"), &mediaBatch);
     const QString mainQml = QDir(QStringLiteral(RETROVDP_QML_DIR))
                                 .filePath(QStringLiteral("Main.qml"));
     engine.load(QUrl::fromLocalFile(mainQml));
@@ -2261,6 +2288,23 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                         QStringLiteral("New")),
                 "File should expose an enabled New command for a blank Screen Image");
 
+    QObject* openMediaClipAction = window->findChild<QObject*>(
+        QStringLiteral("openMediaClipAction"));
+    QObject* mediaClipWorkspace = window->findChild<QObject*>(
+        QStringLiteral("mediaClipWorkspace"));
+    test.expect(openMediaClipAction != nullptr && mediaClipWorkspace != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("mediaSourceMonitor")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("mediaFilmstrip")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("mediaPlayPauseButton")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("openMediaFrameAsSourceButton")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("convertMediaClipButton")) != nullptr,
+                "File should expose the media clip source monitor, controls, and virtualized filmstrip");
+
     QObject* preferencesAction = window->findChild<QObject*>(
         QStringLiteral("preferencesAction"));
     const bool preferencesOpened = preferencesAction != nullptr
@@ -2276,8 +2320,14 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && window->findChild<QObject*>(
                            QStringLiteral("behaviorPreferencesGroup")) != nullptr
                     && window->findChild<QObject*>(
-                           QStringLiteral("defaultPreferencesGroup")) != nullptr,
-                "Preferences should open as a formal screen with Interface, Behavior, and Defaults sections");
+                           QStringLiteral("conversionWorkersComboBox")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("defaultPreferencesGroup")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("mediaToolsPreferencesGroup")) != nullptr
+                    && window->findChild<QObject*>(
+                           QStringLiteral("testMediaToolsButton")) != nullptr,
+                "Preferences should expose Interface, Behavior, Defaults, and Media Tools sections");
 
     appPreferences.setPreviewLayout(2);
     appPreferences.setSidePanelMode(1);

@@ -65,10 +65,11 @@ if(RETROVDP_IPO_SUPPORTED)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Widgets)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Concurrent Core Gui Quick QuickControls2 Widgets)
 qt_standard_project_setup(REQUIRES 6.8)
 
 add_subdirectory(src/core)
+add_subdirectory(src/media)
 add_subdirectory(src/formats)
 add_subdirectory(src/imageio)
 add_subdirectory(app)

@@ -257,6 +257,44 @@ rapid slider changes into one action; Reset restores all conversion and
 framing defaults. The most recent settings and export choice are stored with
 `QSettings` in the operating system's normal per-user settings location.
 
+Application Preferences includes a Media Tools section for optional explicit
+FFmpeg and FFprobe executable paths. Empty paths use automatic discovery beside
+the application and through `PATH`. **Test Media Tools** runs both version
+checks in background work and reports their resolved paths or actionable
+errors. Behavior preferences also expose bounded batch conversion workers:
+`Automatic` leaves one logical processor available when possible, while an
+explicit count from one through the detected processor count is persisted.
+Workers process extracted frames and do not launch additional FFmpeg
+processes. Installation instructions are in [FFMPEG_SETUP.md](FFMPEG_SETUP.md).
+
+## Media clip source monitor
+
+**File → Open Media Clip** opens a generated `clip.json` package. The desktop
+validates the schema, bounds the frame count and metadata size, rejects frame
+or audio paths that escape the package directory, and verifies every referenced
+file before replacing the current clip model.
+
+The monitor displays the selected source frame with timestamp-based play/pause,
+first/previous/next/last controls, a frame scrubber, and a horizontally
+virtualized thumbnail filmstrip. Playback follows each frame's stored
+presentation timestamp using a monotonic clock, so it does not assume constant
+frame spacing. Thumbnail delegates load asynchronously without retaining Qt's
+global image cache and use a bounded two-viewport delegate buffer.
+
+**Open Frame as Source** sends the selected extracted PNG into the normal
+Screen Image workflow. Packages can also be passed as a desktop startup
+argument when the selected filename is `clip.json`. Audio metadata is shown,
+but synchronized sound playback is not enabled yet.
+
+For a source package, **Convert Clip** asks for a saved Screen Image recipe and
+an output parent folder. Conversion runs on background work with the configured
+bounded frame-worker pool, so monitor input and window painting remain
+responsive. The child run directory name is derived
+from the clip name; an existing destination is rejected rather than merged or
+overwritten. On success, the generated target-preview package opens
+automatically as an **Output Monitor**, labeled with its target and mode. Native
+target files remain alongside those previews under the run directory.
+
 The Screen Image Side Panel uses compact light-blue disclosure headers. Art Style
 starts expanded so a new user can immediately choose and apply Balanced,
 Crisp pixel art, Smooth photograph, or Ordered retro. Common settings,

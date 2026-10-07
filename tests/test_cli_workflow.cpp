@@ -82,11 +82,163 @@ int main(int argc, char* argv[])
                     && help.standardOutput.contains("--recipe")
                     && help.standardOutput.contains("--target")
                     && help.standardOutput.contains("--format")
+                    && help.standardOutput.contains("--check-media-tools")
+                    && help.standardOutput.contains("--probe-media")
+                    && help.standardOutput.contains("--convert-clip-map")
+                    && help.standardOutput.contains("--conversion-workers")
                     && help.standardOutput.contains("sega-sms-vdp")
                     && help.standardOutput.contains("mode-4-sms-240-pal")
                     && help.standardOutput.contains("sega-genesis-vdp")
                     && help.standardOutput.contains("mode-5-genesis-h40"),
                 "CLI help should describe its stable input, target, and export options");
+
+    const RunResult mediaTools = runCli({
+        QStringLiteral("--check-media-tools"),
+        QStringLiteral("--ffmpeg-path"),
+        QStringLiteral(RETROVDP_FFMPEG_FIXTURE_PATH),
+        QStringLiteral("--ffprobe-path"),
+        QStringLiteral(RETROVDP_FFPROBE_FIXTURE_PATH),
+        QStringLiteral("--json"),
+    });
+    const QJsonObject mediaToolsJson = jsonResult(mediaTools);
+    test.expect(mediaTools.completed && mediaTools.exitCode == 0
+                    && mediaToolsJson.value(QStringLiteral("status"))
+                        == QStringLiteral("ok")
+                    && mediaToolsJson.value(QStringLiteral("ffmpeg"))
+                           .toObject().value(QStringLiteral("available")).toBool()
+                    && mediaToolsJson.value(QStringLiteral("ffprobe"))
+                           .toObject().value(QStringLiteral("available")).toBool(),
+                "CLI should validate explicit FFmpeg and FFprobe executables");
+
+    const RunResult missingMediaTools = runCli({
+        QStringLiteral("--check-media-tools"),
+        QStringLiteral("--ffmpeg-path"),
+        output.filePath(QStringLiteral("missing-ffmpeg")),
+        QStringLiteral("--ffprobe-path"),
+        output.filePath(QStringLiteral("missing-ffprobe")),
+        QStringLiteral("--json"),
+    });
+    test.expect(missingMediaTools.completed && missingMediaTools.exitCode == 7
+                    && jsonResult(missingMediaTools).value(QStringLiteral("code"))
+                        == QStringLiteral("media-tools-unavailable"),
+                "CLI should use the dependency exit code when media tools are missing");
+
+    const RunResult mediaProbe = runCli({
+        QStringLiteral("--probe-media"), source,
+        QStringLiteral("--ffprobe-path"),
+        QStringLiteral(RETROVDP_FFPROBE_FIXTURE_PATH),
+        QStringLiteral("--json"),
+    });
+    const QJsonObject mediaProbeJson = jsonResult(mediaProbe);
+    test.expect(mediaProbe.completed && mediaProbe.exitCode == 0
+                    && mediaProbeJson.value(QStringLiteral("status"))
+                        == QStringLiteral("ok")
+                    && mediaProbeJson.value(QStringLiteral("kind"))
+                        == QStringLiteral("media-probe")
+                    && mediaProbeJson.value(QStringLiteral("durationUs")).toInteger()
+                        == 5'055'000
+                    && mediaProbeJson.value(QStringLiteral("videoStreams"))
+                           .toArray().size() == 1
+                    && mediaProbeJson.value(QStringLiteral("audioStreams"))
+                           .toArray().size() == 1,
+                "CLI should expose normalized FFprobe video and audio metadata as JSON");
+
+    const QString extractedPackage = output.filePath(QStringLiteral("media-package"));
+    const RunResult mediaExtraction = runCli({
+        QStringLiteral("--extract-media"), source,
+        QStringLiteral("--output"), extractedPackage,
+        QStringLiteral("--ffmpeg-path"),
+        QStringLiteral(RETROVDP_FFMPEG_FIXTURE_PATH),
+        QStringLiteral("--ffprobe-path"),
+        QStringLiteral(RETROVDP_FFPROBE_FIXTURE_PATH),
+        QStringLiteral("--duration"), QStringLiteral("1"),
+        QStringLiteral("--fps"), QStringLiteral("2"),
+        QStringLiteral("--extract-sizing"), QStringLiteral("fit"),
+        QStringLiteral("--extract-width"), QStringLiteral("320"),
+        QStringLiteral("--extract-height"), QStringLiteral("240"),
+        QStringLiteral("--audio"), QStringLiteral("wav"),
+        QStringLiteral("--json"),
+    });
+    const QJsonObject mediaExtractionJson = jsonResult(mediaExtraction);
+    test.expect(mediaExtraction.completed && mediaExtraction.exitCode == 0
+                    && mediaExtractionJson.value(QStringLiteral("status"))
+                        == QStringLiteral("ok")
+                    && mediaExtractionJson.value(QStringLiteral("kind"))
+                        == QStringLiteral("media-extraction")
+                    && mediaExtractionJson.value(QStringLiteral("frames")).toInteger() == 2
+                    && QFileInfo::exists(QDir(extractedPackage).filePath(
+                        QStringLiteral("clip.json")))
+                    && QFileInfo::exists(QDir(extractedPackage).filePath(
+                        QStringLiteral("audio/source.wav"))),
+                "CLI should extract an atomic frame and audio clip package");
+
+    for (const QString& frameName : {QStringLiteral("frame_000001.png"),
+                                     QStringLiteral("frame_000002.png")}) {
+        const QString framePath = QDir(extractedPackage)
+                                      .filePath(QStringLiteral("frames/%1").arg(frameName));
+        QFile::remove(framePath);
+        QFile::copy(source, framePath);
+    }
+    const QString convertedPackage = output.filePath(QStringLiteral("target-run"));
+    const QString batchRecipePath = QDir(QStringLiteral(RETROVDP_FIXTURE_DIR))
+                                        .filePath(QStringLiteral("screen-image-v1.rvdp.json"));
+    const RunResult mediaConversion = runCli({
+        QStringLiteral("--convert-media-clip"),
+        QDir(extractedPackage).filePath(QStringLiteral("clip.json")),
+        QStringLiteral("--recipe"), batchRecipePath,
+        QStringLiteral("--output"), convertedPackage,
+        QStringLiteral("--conversion-workers"), QStringLiteral("1"),
+        QStringLiteral("--json"),
+    });
+    const QJsonObject mediaConversionJson = jsonResult(mediaConversion);
+    if (!mediaConversion.completed || mediaConversion.exitCode != 0
+        || mediaConversionJson.value(QStringLiteral("status"))
+               == QStringLiteral("error")) {
+        std::cerr << "CLI media conversion failure: exit=" << mediaConversion.exitCode
+                  << " stdout=" << mediaConversion.standardOutput.toStdString()
+                  << " stderr=" << mediaConversion.standardError.toStdString() << '\n';
+    }
+    test.expect(mediaConversion.completed && mediaConversion.exitCode == 0
+                    && mediaConversionJson.value(QStringLiteral("kind"))
+                        == QStringLiteral("media-conversion")
+                    && mediaConversionJson.value(QStringLiteral("frames")).toInteger() == 2
+                    && mediaConversionJson.value(QStringLiteral("workers")).toInt() == 1
+                    && QFileInfo::exists(QDir(convertedPackage).filePath(
+                        QStringLiteral("run.json")))
+                    && QFileInfo::exists(QDir(convertedPackage).filePath(
+                        QStringLiteral("clip.json")))
+                    && QFileInfo::exists(QDir(convertedPackage).filePath(
+                        QStringLiteral("previews/frame_000001.png")))
+                    && QFileInfo::exists(QDir(convertedPackage).filePath(
+                        QStringLiteral("native/frame_000001/frame_000001.TIAP"))),
+                "CLI should apply one frozen recipe to native outputs and monitor previews");
+
+    const QString daphneFramefile = QDir(QStringLiteral(RETROVDP_FIXTURE_DIR))
+                                         .filePath(QStringLiteral("daphne_framefile.txt"));
+    const QString nativeClipMap = output.filePath(QStringLiteral("clips.json"));
+    const RunResult clipMapConversion = runCli({
+        QStringLiteral("--convert-clip-map"), daphneFramefile,
+        QStringLiteral("--clip-map-input-format"), QStringLiteral("daphne"),
+        QStringLiteral("--mapping-fps"), QStringLiteral("30000/1001"),
+        QStringLiteral("--clip-map-output-format"), QStringLiteral("json"),
+        QStringLiteral("--output"), nativeClipMap,
+        QStringLiteral("--json"),
+    });
+    const QJsonObject clipMapJson = jsonResult(clipMapConversion);
+    QFile nativeClipMapFile(nativeClipMap);
+    QJsonObject nativeClipMapDocument;
+    if (nativeClipMapFile.open(QIODevice::ReadOnly)) {
+        nativeClipMapDocument = QJsonDocument::fromJson(nativeClipMapFile.readAll()).object();
+    }
+    test.expect(clipMapConversion.completed && clipMapConversion.exitCode == 0
+                    && clipMapJson.value(QStringLiteral("kind"))
+                        == QStringLiteral("clip-map-conversion")
+                    && clipMapJson.value(QStringLiteral("entries")).toInteger() == 3
+                    && nativeClipMapDocument.value(QStringLiteral("kind"))
+                        == QStringLiteral("retrovdp-clip-map")
+                    && nativeClipMapDocument.value(QStringLiteral("frameRate")).toObject()
+                           .value(QStringLiteral("numerator")).toInteger() == 30'000,
+                "CLI should normalize Daphne mappings and attach explicit rational FPS");
 
     const QStringList validArguments{
         QStringLiteral("--input"), source,

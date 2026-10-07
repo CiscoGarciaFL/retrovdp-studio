@@ -1,16 +1,24 @@
-# Future batch mode: video, slideshow, and animation
+# Media sequences: video, audio, clip mapping, and batch conversion
 
 ## Status and intent
 
-This document specifies a future feature. It does not describe functionality
-available in the current application and does not authorize adding a media
-dependency yet.
-
-Its delivery is deferred until the single-asset project, managed-output, and
-application-service contracts in
-[ARCHITECTURE_IMPLEMENTATION_PLAN.md](ARCHITECTURE_IMPLEMENTATION_PLAN.md) are
-stable. This document specifies behavior, not a competing implementation
-schedule.
+This document is the product contract for the active media-sequence program.
+Implementation ordering is owned by [../PROJECT_PLAN.md](../PROJECT_PLAN.md).
+The delivered foundation discovers and validates separately installed
+`ffmpeg` and `ffprobe` executables, probes a single media file into the portable
+timeline model, and extracts an atomic clip package containing timestamped PNG
+frames, optional WAV/FLAC/Ogg audio, and `clip.json`. Mapping import/export and
+target conversion are implemented; desktop extraction, mapping-driven batch
+expansion, and audio playback remain planned until their corresponding
+delivery gates are complete. The desktop can load the
+generated package into a timestamp-driven source monitor with a virtualized
+thumbnail filmstrip, frame stepping/scrubbing, and selected-frame handoff to
+the existing Screen Image conversion workflow. A source clip can also be
+converted with one frozen Screen Image recipe: the batch implementation writes
+native target files, uniform target-faithful preview PNGs, a recipe snapshot
+and digest, `run.json`, and an output-monitor `clip.json` atomically. Frame
+conversion supports bounded, deterministic parallel workers; FFmpeg remains
+outside this worker pool.
 
 Batch Mode will turn a time-ordered or explicitly ordered source into an
 enumerated sequence of still frames, then apply one snapshot of the normal
@@ -18,18 +26,20 @@ RetroVDP Studio compile settings to each frame. The same compiler, validator,
 target modes, and exporters used for a single image must be used for every
 batch item.
 
-The initial goal is deterministic frame-sequence production, not video
-editing, audio handling, or direct encoding of a new movie file.
+The goal is deterministic, synchronized clip-package production rather than a
+general nonlinear video editor. A package can contain source frames, selected
+or generated audio, target-native frame outputs, target-faithful preview
+frames, and the metadata required to reproduce their timing and transforms.
 
 ## Supported source families
 
 The design must accommodate these source families through a common frame
 enumerator:
 
-1. **Video files** — containers and codecs supported by a separately selected
-   cross-platform media backend. Likely examples include MP4, MOV, AVI, MKV,
-   WebM, MPEG, and WMV, but the final list depends on the selected backend and
-   its licensing/package policy.
+1. **Video files** — containers and codecs supported by the selected FFmpeg
+   executables. Likely examples include MP4, MOV, AVI, MKV, WebM, MPEG, WMV,
+   and individual VOB files, but support is capability-probed rather than
+   inferred from an extension.
 2. **Animated images** — animated GIF first, followed by animated WebP and APNG
    when the installed decoder exposes their frames and timing reliably.
 3. **Slideshow folders** — a directory of still images ordered by natural
@@ -40,10 +50,89 @@ enumerator:
    chooses to permit gaps.
 5. **Selected still images** — an explicitly ordered multi-selection, useful
    for converting artwork sets without creating a slideshow manifest first.
+6. **Ordered media segments** — an explicit sequence of compatible files,
+   including loose VOB sets, represented as one virtual timeline while
+   retaining physical segment boundaries.
+7. **DVD structures** — a `VIDEO_TS` directory, disc image, or readable device
+   when the installed FFmpeg exposes its `dvdvideo` demuxer. The user selects
+   a title or explicit program-chain coordinates, chapter range, and angle.
 
-Audio, subtitles, chapter data, and other non-image streams are ignored. The
-application must report that policy before processing a source containing
-them.
+Subtitle rendering and preservation remain deferred. Chapter, title,
+program-chain, angle, and audio-stream information is retained when it affects
+source selection or synchronization.
+
+## Synchronized media timeline
+
+Every source normalizes into a virtual `MediaTimeline`. It owns one video
+timeline, zero or more audio streams, physical source segments, and imported
+clip mappings. Time is represented by integer or rational values; floating
+point FPS is presentation-only.
+
+A `ClipDefinition` records a stable clip ID, source timeline, original mapping
+coordinates, normalized in/out range, exact timebase, stream selections,
+extraction transform, audio policy, conversion-recipe reference, optional
+per-clip override, loop/lead metadata, and importer-specific fields needed for
+lossless round trips.
+
+For an ordered folder, segment boundaries are explicit. A clip may cross a
+boundary only after the input streams pass compatibility checks. A DVD folder
+is not a loose VOB sequence: playback order comes from IFO program chains, so
+the application must never concatenate every VOB by lexical order.
+
+## Audio model
+
+Audio generation is selectable per job and overridable per clip:
+
+- none;
+- copy the selected source stream when the output contract permits it;
+- PCM WAV;
+- FLAC;
+- Ogg Vorbis for Daphne/Hypseus-compatible packages; or
+- a later registered engine-specific encoding profile.
+
+Settings include stream/language selection, sample rate, channel layout,
+codec quality, trim range, synchronization offset, optional padding and
+fades, and optional peak or loudness normalization. Normalization is off by
+default. The run manifest records video and audio ranges independently and
+never hides an applied offset.
+
+When audio is present during playback, its clock is authoritative. Source and
+output monitors select one corresponding audio stream at a time.
+
+## Extraction and conversion transforms
+
+Extraction and target conversion each own a complete, explicit transform.
+Extraction may deinterlace, rotate, crop, scale, correct aspect, pad, sample
+FPS, and normalize pixel/color format before durable frames are written.
+Conversion may independently crop, fit/fill/stretch, scale to target geometry,
+apply pixel aspect, offset, and fill before palette and target compilation.
+
+The clip manifest records original decoded geometry, extracted geometry, and
+target geometry. Native extraction followed by target-side framing is the
+default; pre-scaling is an intentional storage/performance choice and must not
+silently enable a second transform.
+
+## Clip mapping adapters
+
+The initial adapters normalize into the portable `ClipMapDocument` model,
+which retains signed logical frame coordinates and declarative recipe/target
+references until timeline probing can produce `MediaTimeline` and
+`ClipDefinition` values. Implemented adapters are:
+
+1. RetroVDP versioned JSON clip maps;
+2. Daphne/Hypseus framefiles with relative media paths, logical frame starts,
+   MPEG-2 segments, and optional matching Ogg audio;
+3. CSV/TSV clip lists and numbered-sequence manifests; and
+4. compact JSON exports with reference C# and GDScript loaders for custom
+   Unity and Godot ports.
+
+The exact version-1 fields, resolution rules, compatibility limits, CLI, and
+engine loaders are documented in [CLIP_MAPS.md](CLIP_MAPS.md). Arbitrary Singe
+Lua is not executed or interpreted as a manifest. Specific
+declarative formats can receive adapters after representative fixtures define
+their real behavior. Preservation of unknown adapter-specific metadata remains
+a later schema extension; version-1 conversions preserve the documented
+native fields.
 
 ## Common frame model
 
@@ -105,6 +194,14 @@ All frames are independently converted with this settings snapshot. This makes
 the initial implementation parallelizable and keeps it aligned with one-shot
 GUI and CLI conversions.
 
+The snapshot is resolved in this order: batch/global recipe, clip-folder
+recipe, then explicit per-clip override. The final typed snapshot and digest
+are stored in the run manifest. Arbitrary JSON merge and untrusted raw FFmpeg
+arguments are not recipe semantics.
+
+The implemented first conversion slice accepts the global recipe only. Folder
+and per-clip override resolution remain part of batch hardening.
+
 ### Palette stability
 
 Adaptive F18A palettes can visibly change between adjacent frames even when
@@ -130,15 +227,24 @@ batch manifest and one directory per enumerated frame:
 
 ```text
 output-name/
-  batch.json
-  frame_000001/
+  clip.json
+  frames/
     frame_000001.png
-    frame_000001.TIAP
-    frame_000001.TIAC
-  frame_000002/
     frame_000002.png
-    frame_000002.TIAP
-    frame_000002.TIAC
+  audio/
+    source.ogg
+  recipes/
+    extraction.json
+    conversion.rvdp.json
+  outputs/
+    target-run/
+      run.json
+      previews/
+        frame_000001.png
+      native/
+        frame_000001/
+          frame_000001.TIAP
+          frame_000001.TIAC
 ```
 
 The actual files inside each frame directory follow the selected existing
@@ -172,9 +278,9 @@ source reader → frame normalizer → bounded queue → conversion workers → 
 
 The decoder must not load an entire movie into memory. Queue depth, decoded
 dimensions, encoded source size where knowable, frame count, and aggregate
-output estimates all require configurable limits. Conversion workers may run
-in parallel, but the writer and manifest must commit results in enumeration
-order.
+output estimates all require configurable limits. The configured bounded
+conversion workers run in parallel, while the writer and manifest commit
+results in enumeration order.
 
 Live preview is optional. When enabled, the Batch view shows the most recently
 selected or most recently completed frame and may reuse the progressive-row
@@ -216,7 +322,10 @@ retrovdp-cli batch --input movie.mp4 --output converted-frames \
   --mode bitmap-9918a --format tifiles --start 00:00:05 --fps 15
 ```
 
-Exact syntax is deferred until the source/backend decisions are complete.
+The implemented single-file extraction and clip-map conversion syntax is
+documented in [COMMAND_LINE.md](COMMAND_LINE.md). The broader batch syntax
+remains deferred until mapping-driven extraction and recipe resolution are
+implemented.
 Machine-readable progress and the final batch manifest are required for
 automation. The CLI must never prompt for overwrite or decoder choices.
 
@@ -239,24 +348,34 @@ Preflight checks occur before the first committed output where possible:
 
 ## Dependency and packaging decision
 
-Video requires a cross-platform decoding backend that the current application
-does not ship. Before implementation, compare at least:
+The accepted first backend is a separately installed FFmpeg subprocess pair:
+`ffprobe` inspects sources and `ffmpeg` extracts or encodes media. Qt launches
+each executable directly with an argument list; commands never pass through a
+shell. Resolution order is an explicit preference, an executable beside the
+application, then `PATH`.
 
-- FFmpeg libraries or an FFmpeg subprocess boundary;
-- Qt Multimedia and its platform backends;
-- licensing, codec availability, binary size, update policy, hardware-decoder
-  consistency, and Windows/Linux/macOS packaging behavior.
+The application initially does not redistribute FFmpeg. If packaging later
+bundles a build, its exact license configuration, codec set, update policy,
+binary size, and platform coverage require a release review.
 
 Deterministic software decoding is preferred for golden tests. Hardware
 decoding may be offered later only if pixel differences are documented and do
 not affect reproducible batch output unexpectedly.
 
-## Acceptance criteria for a future implementation
+## Acceptance criteria
 
 - The same frame source produces stable enumeration and names.
 - Animated GIF timing, disposal, transparency, and frame composition are
   correct rather than treating frames as independent rectangles.
 - Variable-frame-rate video sampling follows presentation timestamps.
+- Generated audio has a manifest-recorded range, format, and synchronization
+  relationship to the clip video.
+- Extraction and conversion transforms can be enabled independently and their
+  three geometries round-trip through the manifest.
+- Daphne/Hypseus frame mappings retain exact logical frame numbers and
+  rational timebases.
+- Loose VOB sequences retain segment boundaries; DVD structures use authored
+  title/program-chain order when supported.
 - Slideshow natural ordering is defined and tested across platforms.
 - Every frame uses the frozen conversion-settings snapshot and existing core.
 - Sequential and parallel runs produce byte-identical ordered outputs.
@@ -270,7 +389,6 @@ not affect reproducible batch output unexpectedly.
 
 ## Deliberately deferred features
 
-- audio conversion or preservation;
 - subtitle rendering;
 - timeline editing, transitions, titles, or effects;
 - direct AVI/MP4/MOV output;

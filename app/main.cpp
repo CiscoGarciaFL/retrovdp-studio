@@ -1,11 +1,14 @@
 #include "AppPreferencesController.hpp"
 #include "EditorProjectController.hpp"
 #include "ImageInputController.hpp"
+#include "MediaClipController.hpp"
+#include "MediaBatchController.hpp"
 
 #include <QApplication>
 #include <QColor>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFileInfo>
 #include <QFont>
 #include <QIcon>
 #include <QPainter>
@@ -119,10 +122,14 @@ int main(int argc, char* argv[])
     AppPreferencesController appPreferences(&imageInput);
     appPreferences.applyStartupPreferences();
     EditorProjectController editorProject(&imageInput);
+    MediaClipController mediaClip;
+    MediaBatchController mediaBatch(&mediaClip, &appPreferences);
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("imageInput"), &imageInput);
     engine.rootContext()->setContextProperty(QStringLiteral("appPreferences"), &appPreferences);
     engine.rootContext()->setContextProperty(QStringLiteral("editorProject"), &editorProject);
+    engine.rootContext()->setContextProperty(QStringLiteral("mediaClip"), &mediaClip);
+    engine.rootContext()->setContextProperty(QStringLiteral("mediaBatch"), &mediaBatch);
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
@@ -132,6 +139,22 @@ int main(int argc, char* argv[])
     engine.loadFromModule(QStringLiteral("RetroVDPStudio"), QStringLiteral("Main"));
     if (engine.rootObjects().isEmpty()) {
         return EXIT_FAILURE;
+    }
+    QString startupPath;
+    for (int index = 1; index < argc; ++index) {
+        if (std::string_view(argv[index]) != "--smoke-test") {
+            startupPath = QString::fromLocal8Bit(argv[index]);
+            break;
+        }
+    }
+    if (!startupPath.isEmpty()) {
+        const QUrl startupUrl = QUrl::fromLocalFile(startupPath);
+        if (QFileInfo(startupUrl.toLocalFile()).fileName()
+                .compare(QStringLiteral("clip.json"), Qt::CaseInsensitive) == 0) {
+            mediaClip.openClipUrl(startupUrl);
+        } else {
+            imageInput.openUrl(startupUrl);
+        }
     }
     if (smokeTest) {
         // Loading the complete QML object tree and draining its startup events
@@ -170,11 +193,6 @@ int main(int argc, char* argv[])
         QTimer::singleShot(3000, &splash, scheduleSplashExit);
     } else {
         splash.close();
-    }
-
-    if (argc > 1) {
-        const std::string_view firstArgument(argv[1]);
-        imageInput.openUrl(QUrl::fromLocalFile(QString::fromLocal8Bit(argv[1])));
     }
 
     return application.exec();
