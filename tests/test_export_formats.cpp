@@ -290,6 +290,14 @@ void testAllTargetLayouts(TestContext& test)
         core::ConversionMode::Mode5GenesisH40,
         core::ConversionMode::Mode5GenesisH32Pal,
         core::ConversionMode::Mode5GenesisH40Pal,
+        core::ConversionMode::HuC6270Background256,
+        core::ConversionMode::HuC6270Background320,
+        core::ConversionMode::VicIIHiresCharacter,
+        core::ConversionMode::VicIIMulticolorCharacter,
+        core::ConversionMode::VicIIHiresBitmap,
+        core::ConversionMode::VicIIMulticolorBitmap,
+        core::ConversionMode::VicHiresCharacter,
+        core::ConversionMode::VicMulticolorCharacter,
     };
     const std::vector<formats::ExportFormat> tableFormats{
         formats::ExportFormat::Raw,
@@ -342,6 +350,24 @@ void testAllTargetLayouts(TestContext& test)
                                 && findFile(manifest, "LAYOUT.PAL") != nullptr
                                 && findFile(manifest, "LAYOUT.REG") != nullptr,
                             "raw Sega VDP exports should use native asset extensions");
+            }
+            const bool hucAssets = mode == core::ConversionMode::HuC6270Background256
+                || mode == core::ConversionMode::HuC6270Background320;
+            if (format == formats::ExportFormat::Raw && hucAssets) {
+                test.expect(findFile(manifest, "LAYOUT.TILES") != nullptr
+                                && findFile(manifest, "LAYOUT.BAT") != nullptr
+                                && findFile(manifest, "LAYOUT.PAL") != nullptr
+                                && findFile(manifest, "LAYOUT.REG") != nullptr,
+                            "raw HuC6270 exports should use native asset extensions");
+            }
+            const bool commodoreAssets = mode >= core::ConversionMode::VicIIHiresCharacter
+                && mode <= core::ConversionMode::VicMulticolorCharacter;
+            if (format == formats::ExportFormat::Raw && commodoreAssets) {
+                test.expect((findFile(manifest, "LAYOUT.CHR") != nullptr
+                             || findFile(manifest, "LAYOUT.BITMAP") != nullptr)
+                                && findFile(manifest, "LAYOUT.SCR") != nullptr
+                                && findFile(manifest, "LAYOUT.REG") != nullptr,
+                            "raw VIC and VIC-II exports should use native asset extensions");
             }
         }
         test.expect(formats::isExportApplicable(formats::ExportFormat::Png, mode),

@@ -138,3 +138,50 @@ pattern interpretation needs a separate editor and compiler contract.
 - Sprite index 0 is transparent. Palette, size, flip, priority, link order, and
   screen coordinates belong to SAT/object data rather than being baked into a
   TMS-style single-color pattern.
+
+## NEC/Hudson HuC6270 disposition
+
+The `huc6270` target has the following current interpretation:
+
+| Workspace | Disposition | Implemented scope |
+| --- | --- | --- |
+| Screen Image | Native background slice | 256×224 and 320×224; 8×8 4-plane tiles; 32×32 or 64×32 little-endian BAT; 16 background palette banks selected per BAT entry; complete 512-entry HuC6260/VCE color table; initial VDC/VCE state; RAW and PNG export |
+| Character | Native | 8×8 4bpp indexed tiles; up to 1,920 project slots; 16 palette banks; 40×28 visible authoring grid; indexed drawing, transforms, clipboard, preview, and project persistence |
+| Sprite | Native editor interpretation with SAT serialization deferred | 64 entries; independent 16/32-pixel width and 16/32/64-pixel height; 4bpp indexed pixels; 16 sprite palette banks; index 0 transparency; rectangular rotation disabled; 16-sprites-per-scanline limit reported |
+
+Screen Image allocates BAT at VRAM address zero and makes emitted BAT pattern
+indexes point to the pattern region immediately following that BAT. Pattern
+bytes use the HuC6270 plane-0/1 then plane-2/3 row layout. The `.REG` sidecar
+contains twenty little-endian VDC words plus the selected VCE clock-control
+word. Sprite pattern and SAT serialization remains part of structured-editor
+export and is not synthesized by the screen-image converter.
+
+## MOS VIC-II disposition
+
+The `vic-ii` target has the following current interpretation:
+
+| Workspace | Disposition | Implemented scope |
+| --- | --- | --- |
+| Screen Image | Native | 320×200 high-resolution character and bitmap modes; 160×200 logical multicolor character and bitmap modes; 2 KiB character or 8 KiB bitmap data; 1,000-byte screen memory; color RAM where required; 47-byte register image; RAW and PNG export |
+| Character | Native high-resolution, constrained multicolor | 8×8 patterns, 256 slots, and a 40×25 map. The converter implements native two-bit wide-pixel allocation; the manual editor retains the shared indexed/binary character surface until per-cell VIC-II multicolor controls are generalized. |
+| Sprite | Native editor interpretation with register serialization deferred | Eight 24×21 entries; high-resolution or multicolor depth; index 0 transparency; fixed geometry; eight-sprites-per-scanline limit reported; project persistence |
+
+Palette RGB values are nominal preview references. The encoded color indexes,
+screen/color memory, bitmap/character bytes, and mode-register bits are the
+portable contract because analog output varies by VIC-II revision and video
+standard. Raster interrupts, sprite multiplexing, illegal modes, and timed
+color effects are outside this static-asset slice.
+
+## MOS VIC (VIC-20) disposition
+
+The `vic` target has the following current interpretation:
+
+| Workspace | Disposition | Implemented scope |
+| --- | --- | --- |
+| Screen Image | Native | 176×184 high-resolution and 88×184 logical multicolor character modes; 2 KiB character data; 506-byte screen and color memory; 16-byte register image; RAW and PNG export |
+| Character | Native high-resolution, constrained multicolor | 8×8 patterns, 256 slots, and a 22×23 map. The converter implements native wide-pixel multicolor allocation; the manual editor retains the shared binary character surface until VIC-specific per-cell color controls are generalized. |
+| Sprite | Not applicable | The VIC has no hardware sprite facility, so the Sprite workspace is disabled and no synthetic sprite format is exposed. |
+
+As with VIC-II, fixed-palette RGB values are nominal preview references while
+the emitted indexes and memory/register layout are the durable hardware
+contract.

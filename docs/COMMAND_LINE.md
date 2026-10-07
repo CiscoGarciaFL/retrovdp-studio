@@ -45,7 +45,7 @@ summary.
 ## Targets, modes, presets, and formats
 
 The implemented target names are `tms9918a`, `f18a`, `v9938`, `v9958`,
-`sega-sms-vdp`, and `sega-genesis-vdp`. The default target is `tms9918a`; the default mode is
+`sega-sms-vdp`, `sega-genesis-vdp`, `huc6270`, `vic-ii`, and `vic`. The default target is `tms9918a`; the default mode is
 `bitmap-9918a`, the default preset is `balanced`, and the default format is
 `tifiles`. A target accepts only modes declared compatible by its profile.
 
@@ -74,6 +74,14 @@ Supported modes are:
 - `mode-5-genesis-h40`
 - `mode-5-genesis-h32-pal`
 - `mode-5-genesis-h40-pal`
+- `huc6270-background-256x224`
+- `huc6270-background-320x224`
+- `vic-ii-hires-character`
+- `vic-ii-multicolor-character`
+- `vic-ii-hires-bitmap`
+- `vic-ii-multicolor-bitmap`
+- `vic-hires-character`
+- `vic-multicolor-character`
 
 Master System Mode 4 supports `raw` and `png` export. A RAW manifest contains
 `.TILES` planar pattern data, a `.MAP` name table, `.PAL` RGB222 CRAM bytes,
@@ -82,6 +90,11 @@ and `.REG` values for VDP registers 0–10.
 Genesis Mode V supports `raw` and `png` export. A RAW manifest contains
 `.TILES` packed-nibble pattern data, a big-endian `.MAP` Plane A name table,
 `.PAL` big-endian RGB333 CRAM words, and `.REG` values for VDP registers 0–23.
+
+HuC6270 RAW output contains `.TILES` 4-plane pattern data, a little-endian
+`.BAT`, a complete `.PAL` VCE color table, and `.REG` VDC/VCE state. VIC and
+VIC-II RAW output uses `.CHR` or `.BITMAP`, `.SCR`, optional `.COL`, and `.REG`
+sidecars according to the selected native mode.
 
 Supported presets are `balanced`, `crisp-pixel-art`, `smooth-photograph`, and
 `ordered-retro`. The shorter aliases `crisp`, `smooth`, and `ordered` are also

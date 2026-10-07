@@ -1,12 +1,14 @@
 add_library(retrovdp_core STATIC
     Bitmap9918Converter.cpp
     ColorMath.cpp
+    CommodoreVdpConverter.cpp
     ConversionJobController.cpp
     ConversionPerformance.cpp
     ConversionRegistry.cpp
     ConversionTypes.cpp
     Dithering.cpp
     F18AConverter.cpp
+    HuC6270Converter.cpp
     ImageDecoding.cpp
     ImageAdjustments.cpp
     ImageTransform.cpp

@@ -1,7 +1,9 @@
 #include "retrovdp/core/ConversionRegistry.hpp"
 
 #include "retrovdp/core/Bitmap9918Converter.hpp"
+#include "retrovdp/core/CommodoreVdpConverter.hpp"
 #include "retrovdp/core/F18AConverter.hpp"
+#include "retrovdp/core/HuC6270Converter.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/SegaSmsVdpConverter.hpp"
@@ -41,6 +43,20 @@ ConversionResult compileRegisteredConversion(const RgbImage& source,
 
     ConversionResult result;
     switch (settings.mode) {
+    case ConversionMode::HuC6270Background256:
+    case ConversionMode::HuC6270Background320:
+        result = convertHuC6270Background(
+            source, settings, cancellation, std::move(progress));
+        break;
+    case ConversionMode::VicIIHiresCharacter:
+    case ConversionMode::VicIIMulticolorCharacter:
+    case ConversionMode::VicIIHiresBitmap:
+    case ConversionMode::VicIIMulticolorBitmap:
+    case ConversionMode::VicHiresCharacter:
+    case ConversionMode::VicMulticolorCharacter:
+        result = convertCommodoreDisplay(
+            source, settings, cancellation, std::move(progress));
+        break;
     case ConversionMode::Mode5GenesisH32:
     case ConversionMode::Mode5GenesisH40:
     case ConversionMode::Mode5GenesisH32Pal:

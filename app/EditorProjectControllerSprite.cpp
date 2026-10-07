@@ -27,6 +27,7 @@ bool sameSpritePattern(const auto& left, const auto& right)
 int EditorProjectController::activeSpriteColorDepth() const
 {
     if (usesIndexed4BppEditor()) return 4;
+    if (usesVicIIEditor()) return 2;
     if (spriteSets_.empty()) return 1;
     const auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                                 .placements[static_cast<std::size_t>(activeSprite_)];
@@ -52,6 +53,14 @@ int EditorProjectController::normalizedSpriteSize(int value) const
         height = std::clamp(((height + 4) / 8) * 8, 8, 32);
         return width * 100 + height;
     }
+    if (usesHuC6270Editor()) {
+        int width = value >= 100 ? value / 100 : value;
+        int height = value >= 100 ? value % 100 : value;
+        width = width <= 24 ? 16 : 32;
+        height = height <= 24 ? 16 : (height <= 48 ? 32 : 64);
+        return width * 100 + height;
+    }
+    if (usesVicIIEditor()) return 2421;
     return value >= 16 ? 16 : 8;
 }
 
@@ -59,14 +68,14 @@ int EditorProjectController::spritePatternWidth(int size) const
 {
     size = normalizedSpriteSize(size);
     if (usesSmsMode4Editor()) return 8;
-    if (usesGenesisMode5Editor()) return size / 100;
+    if (usesCompoundSpriteEditor()) return size / 100;
     return size;
 }
 
 int EditorProjectController::spritePatternHeight(int size) const
 {
     size = normalizedSpriteSize(size);
-    return usesGenesisMode5Editor() ? size % 100 : size;
+    return usesCompoundSpriteEditor() ? size % 100 : size;
 }
 
 bool EditorProjectController::canRotateSpritePattern() const
@@ -188,7 +197,8 @@ int EditorProjectController::activeSpritePaletteBank() const
 void EditorProjectController::setActiveSpritePaletteBank(int value)
 {
     if (spriteSets_.empty()) return;
-    value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3 : 0);
+    value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
+                              : (usesHuC6270Editor() ? 15 : 0));
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.palette == value) return;
@@ -365,8 +375,8 @@ QVariantList EditorProjectController::spritePatternPixels(int setIndex,
         || spriteIndex < 0 || spriteIndex >= spritePatternsPerSet()) {
         return result;
     }
-    std::array<std::uint8_t, 1024> panPixels{};
-    const std::array<std::uint8_t, 1024>* pixels =
+    std::vector<std::uint8_t> panPixels(2048);
+    const std::vector<std::uint8_t>* pixels =
         &visibleSpritePixels(spritePattern(setIndex, spriteIndex, size));
     if (spritePanActive_ && setIndex == spritePanSetIndex_
         && spriteIndex == spritePanSpriteIndex_ && size == spritePanSize_) {
@@ -405,7 +415,7 @@ void EditorProjectController::paintSpritePixel(int setIndex,
     const bool standalone = !spriteEditActive_;
     if (standalone) beginSpriteEdit(setIndex, spriteIndex, size);
     auto& pattern = spritePattern(setIndex, spriteIndex, size);
-    std::array<std::uint8_t, 1024>* pixels = &pattern.baselinePixels;
+    std::vector<std::uint8_t>* pixels = &pattern.baselinePixels;
     int value = foreground ? 1 : 0;
     if (editScope_ == 1) {
         ensureF18aSpriteOverride(pattern);
@@ -741,7 +751,7 @@ EditorProjectController::SpritePattern&
 EditorProjectController::spritePattern(int setIndex, int spriteIndex, int size)
 {
     auto& set = spriteSets_[static_cast<std::size_t>(setIndex)];
-    if (usesGenesisMode5Editor())
+    if (usesCompoundSpriteEditor())
         return set.patternsGenesis[static_cast<std::size_t>(spriteIndex)];
     return normalizedSpriteSize(size) == 16
         ? set.patterns16[static_cast<std::size_t>(spriteIndex)]
@@ -752,25 +762,25 @@ const EditorProjectController::SpritePattern&
 EditorProjectController::spritePattern(int setIndex, int spriteIndex, int size) const
 {
     const auto& set = spriteSets_[static_cast<std::size_t>(setIndex)];
-    if (usesGenesisMode5Editor())
+    if (usesCompoundSpriteEditor())
         return set.patternsGenesis[static_cast<std::size_t>(spriteIndex)];
     return normalizedSpriteSize(size) == 16
         ? set.patterns16[static_cast<std::size_t>(spriteIndex)]
         : set.patterns8[static_cast<std::size_t>(spriteIndex)];
 }
 
-const std::array<std::uint8_t, 1024>&
+const std::vector<std::uint8_t>&
 EditorProjectController::visibleSpritePixels(const SpritePattern& pattern) const
 {
     return editScope_ == 1 && pattern.f18aOverride
         ? pattern.f18aPixels : pattern.baselinePixels;
 }
 
-std::array<std::uint8_t, 1024> EditorProjectController::pannedSpritePixels() const
+std::vector<std::uint8_t> EditorProjectController::pannedSpritePixels() const
 {
     const auto& source = spritePanEnhanced_ && spritePanOriginal_.f18aOverride
         ? spritePanOriginal_.f18aPixels : spritePanOriginal_.baselinePixels;
-    std::array<std::uint8_t, 1024> result{};
+    std::vector<std::uint8_t> result(2048);
     const int width = spritePatternWidth(spritePanSize_);
     const int height = spritePatternHeight(spritePanSize_);
     for (int row = 0; row < height; ++row) {
@@ -814,7 +824,7 @@ EditorProjectController::spritePatternFromClipboard() const
     data.height = root.contains(QStringLiteral("height"))
         ? root.value(QStringLiteral("height")).toInt() : data.size;
     if (data.width < 8 || data.width > 32 || data.width % 8 != 0
-        || data.height < 8 || data.height > 32 || data.height % 8 != 0)
+        || data.height < 8 || data.height > 64)
         return std::nullopt;
     data.enhanced = root.value(QStringLiteral("scope")).toString()
         == QStringLiteral("f18a-override");

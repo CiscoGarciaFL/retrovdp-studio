@@ -22,8 +22,10 @@ Item {
         return visible
     }
     readonly property int editorSlotCount: visibleEditorSlots.length
-    readonly property bool genesisMode:
+    readonly property bool entryListMode:
         editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+        || editorProject.activeTargetInfo.id === "huc6270"
+        || editorProject.activeTargetInfo.id === "vic-ii"
     property bool sprite8Expanded:
         editorProject.activeTargetInfo.spritePerItemSize
         || editorProject.spriteGlobalSize === 8
@@ -281,7 +283,8 @@ Item {
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Genesis sprite entries · %1")
+                text: qsTr("%1 sprite entries · %2")
+                      .arg(editorProject.activeTargetInfo.name)
                       .arg(editorProject.spritePatternsPerSet)
                 color: "white"
                 font.weight: Font.DemiBold
@@ -605,7 +608,7 @@ Item {
         }
 
         SplitView {
-            visible: !root.genesisMode
+            visible: !root.entryListMode
             Layout.fillWidth: true
             Layout.fillHeight: true
             orientation: Qt.Vertical
@@ -636,7 +639,7 @@ Item {
         }
 
         Loader {
-            active: root.genesisMode
+            active: root.entryListMode
             Layout.fillWidth: true
             Layout.fillHeight: true
             sourceComponent: GenesisSpriteList {

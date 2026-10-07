@@ -25,7 +25,8 @@ The application is organized around three independent ideas:
 ## Status
 
 The current release implements TMS9918A, F18A, V9938, V9958, Sega Master
-System, and Sega Genesis/Mega Drive conversion profiles. V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
+System, Sega Genesis/Mega Drive, NEC/Hudson HuC6270, MOS VIC-II, and MOS VIC
+conversion profiles. V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
 compiled through the registered Yamaha bitmap strategies, including
 programmable palette and YJK/YAE output. The Master System profile compiles
 192-, 224-, and PAL 240-line Mode 4 screens into 4-bit planar tiles, name-table
@@ -43,7 +44,12 @@ regions can be extracted straight into the selected layer. Character export
 writes packed `.TILES`, three big-endian map files, `.PAL`, and `.REG` assets;
 its Sprite workspace exposes 80 entries, four palette banks, and every
 rectangular 8-to-32-pixel hardware size. Native linked-SAT export remains part
-of the shared export work. The input
+of the shared export work. HuC6270 conversion emits 256×224 and 320×224
+backgrounds as native 4-plane tiles, BAT entries, the complete VCE palette
+table, and VDC/VCE state. VIC-II conversion covers high-resolution and
+multicolor character and bitmap modes; VIC-20 conversion covers native
+high-resolution and multicolor character modes. Both produce native screen,
+color, bitmap/character, and register sidecars as applicable. The input
 pipeline loads common Qt raster formats, PCX, and supported retro formats with
 explicit safety limits. The export layer provides deterministic RAW, RLE,
 TIFILES, V9T9, MSX, Coleco, Adam, Extended BASIC, ROM, and PNG exporters with
@@ -153,7 +159,9 @@ processes. The CLI can also normalize and
 convert native JSON, CSV/TSV, and Daphne/Hypseus clip mappings; the native
 schema includes reference loaders for Unity and Godot ports.
 See
-[`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform setup instructions
+[`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform setup instructions,
+[`docs/VIDEO_CLIP_SUPPORT.md`](docs/VIDEO_CLIP_SUPPORT.md) for the complete
+implemented video-clip workflow,
 [`docs/CLIP_MAPS.md`](docs/CLIP_MAPS.md) for mapping interchange, and
 [`docs/BATCH_MODE.md`](docs/BATCH_MODE.md) for the active video, audio,
 clip-mapping, and frame-conversion plan.

@@ -102,6 +102,22 @@ bool isSegaGenesisMode(ConversionMode mode)
         || mode == ConversionMode::Mode5GenesisH40Pal;
 }
 
+bool isHuC6270Mode(ConversionMode mode)
+{
+    return mode == ConversionMode::HuC6270Background256
+        || mode == ConversionMode::HuC6270Background320;
+}
+
+bool isCommodoreMode(ConversionMode mode)
+{
+    return mode == ConversionMode::VicIIHiresCharacter
+        || mode == ConversionMode::VicIIMulticolorCharacter
+        || mode == ConversionMode::VicIIHiresBitmap
+        || mode == ConversionMode::VicIIMulticolorBitmap
+        || mode == ConversionMode::VicHiresCharacter
+        || mode == ConversionMode::VicMulticolorCharacter;
+}
+
 const TargetMemoryTable* table(const TargetMemoryImage& image, TargetTableRole role)
 {
     const auto found = std::ranges::find(image.tables, role, &TargetMemoryTable::role);
@@ -250,6 +266,28 @@ GeneratedFileManifest tableFiles(const ExportRequest& request)
                 fileName = upperBase + ".MAP";
             else if (source.role == TargetTableRole::Palette)
                 fileName = upperBase + ".PAL";
+            else if (source.role == TargetTableRole::DisplayRegisters)
+                fileName = upperBase + ".REG";
+        } else if (request.format == ExportFormat::Raw
+                   && isHuC6270Mode(request.target->mode)) {
+            if (source.role == TargetTableRole::Pattern)
+                fileName = upperBase + ".TILES";
+            else if (source.role == TargetTableRole::TileMap)
+                fileName = upperBase + ".BAT";
+            else if (source.role == TargetTableRole::Palette)
+                fileName = upperBase + ".PAL";
+            else if (source.role == TargetTableRole::DisplayRegisters)
+                fileName = upperBase + ".REG";
+        } else if (request.format == ExportFormat::Raw
+                   && isCommodoreMode(request.target->mode)) {
+            if (source.role == TargetTableRole::Pattern)
+                fileName = upperBase + ".CHR";
+            else if (source.role == TargetTableRole::Framebuffer)
+                fileName = upperBase + ".BITMAP";
+            else if (source.role == TargetTableRole::TileMap)
+                fileName = upperBase + ".SCR";
+            else if (source.role == TargetTableRole::Color)
+                fileName = upperBase + ".COL";
             else if (source.role == TargetTableRole::DisplayRegisters)
                 fileName = upperBase + ".REG";
         }

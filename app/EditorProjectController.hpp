@@ -24,6 +24,9 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(bool v9958Enabled READ v9958Enabled NOTIFY projectChanged)
     Q_PROPERTY(bool segaSmsEnabled READ segaSmsEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool segaGenesisEnabled READ segaGenesisEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool huc6270Enabled READ huc6270Enabled NOTIFY projectChanged)
+    Q_PROPERTY(bool vicIiEnabled READ vicIiEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool vicEnabled READ vicEnabled NOTIFY projectChanged)
     Q_PROPERTY(QStringList plannedTargetIds READ plannedTargetIds NOTIFY projectChanged)
     Q_PROPERTY(int activeTarget READ activeTarget WRITE setActiveTarget NOTIFY projectChanged)
     Q_PROPERTY(QVariantList supportedTargets READ supportedTargets NOTIFY projectChanged)
@@ -105,6 +108,9 @@ public:
     [[nodiscard]] bool v9958Enabled() const { return v9958Enabled_; }
     [[nodiscard]] bool segaSmsEnabled() const { return segaSmsEnabled_; }
     [[nodiscard]] bool segaGenesisEnabled() const { return segaGenesisEnabled_; }
+    [[nodiscard]] bool huc6270Enabled() const { return huc6270Enabled_; }
+    [[nodiscard]] bool vicIiEnabled() const { return vicIiEnabled_; }
+    [[nodiscard]] bool vicEnabled() const { return vicEnabled_; }
     [[nodiscard]] QStringList plannedTargetIds() const { return plannedTargetIds_; }
     [[nodiscard]] int activeTarget() const;
     [[nodiscard]] QVariantList supportedTargets() const;
@@ -370,8 +376,8 @@ private:
         bool priority{};
     };
     struct SpritePattern {
-        std::array<std::uint8_t, 1024> baselinePixels{};
-        std::array<std::uint8_t, 1024> f18aPixels{};
+        std::vector<std::uint8_t> baselinePixels = std::vector<std::uint8_t>(2048);
+        std::vector<std::uint8_t> f18aPixels = std::vector<std::uint8_t>(2048);
         bool f18aOverride{};
     };
     struct SpriteSet {
@@ -400,7 +406,7 @@ private:
         int height{8};
         int colorDepth{1};
         bool enhanced{};
-        std::array<std::uint8_t, 1024> pixels{};
+        std::vector<std::uint8_t> pixels = std::vector<std::uint8_t>(2048);
     };
 
     [[nodiscard]] CharacterSet makeCharacterSet(int ordinal) const;
@@ -419,9 +425,9 @@ private:
     [[nodiscard]] const SpritePattern& spritePattern(int setIndex,
                                                      int spriteIndex,
                                                      int size) const;
-    [[nodiscard]] const std::array<std::uint8_t, 1024>&
+    [[nodiscard]] const std::vector<std::uint8_t>&
         visibleSpritePixels(const SpritePattern& pattern) const;
-    [[nodiscard]] std::array<std::uint8_t, 1024> pannedSpritePixels() const;
+    [[nodiscard]] std::vector<std::uint8_t> pannedSpritePixels() const;
     [[nodiscard]] std::optional<SpriteClipboardData>
         spritePatternFromClipboard() const;
     void ensureF18aSpriteOverride(SpritePattern& pattern);
@@ -434,6 +440,9 @@ private:
     void syncSpriteDrawingColor();
     [[nodiscard]] bool usesSmsMode4Editor() const;
     [[nodiscard]] bool usesGenesisMode5Editor() const;
+    [[nodiscard]] bool usesHuC6270Editor() const;
+    [[nodiscard]] bool usesVicIIEditor() const;
+    [[nodiscard]] bool usesCompoundSpriteEditor() const;
     [[nodiscard]] bool usesIndexed4BppEditor() const;
     [[nodiscard]] int normalizedSpriteSize(int value) const;
     [[nodiscard]] bool usesPerSpriteSizeEditor() const;
@@ -452,6 +461,9 @@ private:
     bool v9958Enabled_{};
     bool segaSmsEnabled_{};
     bool segaGenesisEnabled_{};
+    bool huc6270Enabled_{};
+    bool vicIiEnabled_{};
+    bool vicEnabled_{};
     QStringList plannedTargetIds_;
     int previewTarget_{};
     int editScope_{};

@@ -1553,6 +1553,77 @@ void testEditorProjectRecipe(TestContext& test)
                            QStringLiteral("GENESIS_CAMPAIGN.REG"))).size() == 24,
                 "Genesis Character export should write native big-endian tile words for all three maps");
 
+    ImageInputController hucImage;
+    hucImage.setAutoUpdate(false);
+    EditorProjectController hucProject(&hucImage);
+    hucProject.configureProjectWithTargets(
+        QStringLiteral("HuC6270 Campaign"), false, false,
+        QStringList{QStringLiteral("huc6270")});
+    const QVariantMap hucInfo = hucProject.activeTargetInfo();
+    hucProject.setCharacterPaletteBank(15);
+    hucProject.setActiveSprite(63);
+    hucProject.setActiveSpriteSize(3264);
+    hucProject.setActiveSpritePaletteBank(15);
+    hucProject.setSpriteDrawingColorIndex(15);
+    hucProject.paintSpritePixel(0, 63, 3264, 63, 31, true);
+    const QVariantList hucSprite = hucProject.spritePatternPixels(0, 63, 3264);
+    test.expect(hucProject.huc6270Enabled()
+                    && hucProject.activeTarget()
+                        == static_cast<int>(retrovdp::core::TargetProfileId::HuC6270)
+                    && hucProject.supportedTargets().size() == 1
+                    && hucProject.characterPatternsPerSet() == 1920
+                    && hucProject.characterPaletteBank() == 15
+                    && hucInfo.value(QStringLiteral("characterPaletteBankCount")).toInt() == 16
+                    && hucInfo.value(QStringLiteral("spritePaletteBankCount")).toInt() == 16
+                    && hucInfo.value(QStringLiteral("spriteMaximumPerScanline")).toInt() == 16
+                    && hucProject.spritePatternsPerSet() == 64
+                    && hucProject.spritePatternWidth(3264) == 32
+                    && hucProject.spritePatternHeight(3264) == 64
+                    && hucProject.activeSpriteColorDepth() == 4
+                    && hucProject.activeSpritePaletteBank() == 15
+                    && !hucProject.canRotateSpritePattern()
+                    && hucSprite.size() == 2048
+                    && hucSprite[2047].toInt() == 15,
+                "a HuC6270 project should expose native tile palettes and compound 4bpp sprites");
+
+    ImageInputController vicIiImage;
+    vicIiImage.setAutoUpdate(false);
+    EditorProjectController vicIiProject(&vicIiImage);
+    vicIiProject.configureProjectWithTargets(
+        QStringLiteral("VIC-II Campaign"), false, false,
+        QStringList{QStringLiteral("vic-ii")});
+    const QVariantMap vicIiInfo = vicIiProject.activeTargetInfo();
+    vicIiProject.setActiveSprite(7);
+    vicIiProject.setSpriteDrawingColorIndex(3);
+    vicIiProject.paintSpritePixel(0, 7, 2421, 20, 23, true);
+    const QVariantList vicIiSprite = vicIiProject.spritePatternPixels(0, 7, 2421);
+    test.expect(vicIiProject.vicIiEnabled()
+                    && vicIiProject.activeTarget()
+                        == static_cast<int>(retrovdp::core::TargetProfileId::VicII)
+                    && vicIiProject.characterMapColumns() == 40
+                    && vicIiProject.characterMapRows() == 25
+                    && vicIiProject.spritePatternWidth(2421) == 24
+                    && vicIiProject.spritePatternHeight(2421) == 21
+                    && vicIiProject.activeSpriteColorDepth() == 2
+                    && vicIiInfo.value(QStringLiteral("spriteMaximumPerScanline")).toInt() == 8
+                    && vicIiSprite.size() == 504
+                    && vicIiSprite[503].toInt() == 3,
+                "a VIC-II project should expose 40x25 character memory and native 24x21 sprites");
+
+    ImageInputController vicImage;
+    vicImage.setAutoUpdate(false);
+    EditorProjectController vicProject(&vicImage);
+    vicProject.configureProjectWithTargets(
+        QStringLiteral("VIC Campaign"), false, false,
+        QStringList{QStringLiteral("vic")});
+    test.expect(vicProject.vicEnabled()
+                    && vicProject.activeTarget()
+                        == static_cast<int>(retrovdp::core::TargetProfileId::Vic)
+                    && vicProject.characterMapColumns() == 22
+                    && vicProject.characterMapRows() == 23
+                    && !vicProject.spriteModeAvailable(),
+                "a VIC-20 project should expose its 22x23 character display without synthetic sprites");
+
     ImageInputController recipeImage;
     recipeImage.setAutoUpdate(false);
     recipeImage.openUrl(QUrl::fromLocalFile(goldenSource(u"source/tiny-rgba.png")));
@@ -2433,6 +2504,12 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
         QStringLiteral("segaSmsProjectTarget"));
     QObject* segaGenesisProjectTarget = window->findChild<QObject*>(
         QStringLiteral("segaGenesisProjectTarget"));
+    QObject* huc6270ProjectTarget = window->findChild<QObject*>(
+        QStringLiteral("huc6270ProjectTarget"));
+    QObject* vicIiProjectTarget = window->findChild<QObject*>(
+        QStringLiteral("vicIiProjectTarget"));
+    QObject* vicProjectTarget = window->findChild<QObject*>(
+        QStringLiteral("vicProjectTarget"));
     test.expect(projectSettingsOpened && projectDialog != nullptr
                     && waitFor([&] { return projectDialog->property("visible").toBool(); })
                     && window->findChild<QObject*>(QStringLiteral("projectNameField")) != nullptr
@@ -2457,7 +2534,19 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && segaGenesisProjectTarget != nullptr
                     && segaGenesisProjectTarget->property("enabled").toBool()
                     && segaGenesisProjectTarget->property("text").toString()
-                        == QStringLiteral("Sega Genesis / Mega Drive 315-5313 / YM7101"),
+                        == QStringLiteral("Sega Genesis / Mega Drive 315-5313 / YM7101")
+                    && huc6270ProjectTarget != nullptr
+                    && huc6270ProjectTarget->property("enabled").toBool()
+                    && huc6270ProjectTarget->property("text").toString()
+                        == QStringLiteral("NEC / Hudson HuC6270")
+                    && vicIiProjectTarget != nullptr
+                    && vicIiProjectTarget->property("enabled").toBool()
+                    && vicIiProjectTarget->property("text").toString()
+                        == QStringLiteral("MOS VIC-II")
+                    && vicProjectTarget != nullptr
+                    && vicProjectTarget->property("enabled").toBool()
+                    && vicProjectTarget->property("text").toString()
+                        == QStringLiteral("MOS VIC (VIC-20)"),
                 "implemented project targets should be enabled and omit roadmap status text");
     if (projectDialog != nullptr) QMetaObject::invokeMethod(projectDialog, "close");
     QObject* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
