@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 4 ]]; then
-  echo "usage: $0 <deployed-root> <deb-root> <version> <output.deb>" >&2
+if [[ $# -ne 5 ]]; then
+  echo "usage: $0 <deployed-root> <deb-root> <version> <architecture> <output.deb>" >&2
   exit 2
 fi
 
@@ -10,7 +10,16 @@ workspace="$(pwd -P)"
 deployed_root="$(realpath "$1")"
 deb_root="$(realpath -m "$2")"
 release_version="$3"
-output_deb="$(realpath -m "$4")"
+package_architecture="$4"
+output_deb="$(realpath -m "$5")"
+
+case "${package_architecture}" in
+  amd64|arm64) ;;
+  *)
+    echo "Unsupported Debian architecture: ${package_architecture}" >&2
+    exit 2
+    ;;
+esac
 
 case "${deb_root}" in
   "${workspace}"/*) ;;
@@ -92,6 +101,7 @@ fi
 
 sed \
   -e "s|@VERSION@|${deb_version}|g" \
+  -e "s|@ARCHITECTURE@|${package_architecture}|g" \
   -e "s|@INSTALLED_SIZE@|${installed_size}|g" \
   packaging/linux/control.in > "${deb_root}/DEBIAN/control"
 chmod 0644 "${deb_root}/DEBIAN/control"

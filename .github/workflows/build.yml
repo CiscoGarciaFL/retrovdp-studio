@@ -25,15 +25,28 @@ jobs:
           - name: Windows (MinGW x64)
             os: windows-latest
             compiler: g++
+            qt_host: ""
+            qt_arch: ""
           - name: Ubuntu (GCC x64)
             os: ubuntu-latest
             compiler: g++
+            qt_host: ""
+            qt_arch: ""
+          - name: Ubuntu (GCC ARM64)
+            os: ubuntu-24.04-arm
+            compiler: g++
+            qt_host: linux_arm64
+            qt_arch: linux_gcc_arm64
           - name: macOS (AppleClang Intel)
             os: macos-15-intel
             compiler: clang++
+            qt_host: ""
+            qt_arch: ""
           - name: macOS (AppleClang ARM64)
             os: macos-15
             compiler: clang++
+            qt_host: ""
+            qt_arch: ""
 
     env:
       CXX: ${{ matrix.compiler }}
@@ -52,10 +65,19 @@ jobs:
           cache: true
 
       - name: Install Qt
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.qt_host == ''
         uses: jurplel/install-qt-action@v4
         with:
           version: 6.10.3
+          cache: true
+
+      - name: Install Qt (Linux ARM64)
+        if: matrix.qt_host == 'linux_arm64'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.10.3
+          host: ${{ matrix.qt_host }}
+          arch: ${{ matrix.qt_arch }}
           cache: true
 
       - name: Configure
