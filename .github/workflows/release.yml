@@ -152,7 +152,7 @@ jobs:
             deb_arch: amd64
             artifact_arch: x64
             elf_arch: x86_64
-          - runner: ubuntu-22.04-arm
+          - runner: ubuntu-24.04-arm
             display_arch: ARM64
             uname_arch: aarch64
             qt_host: linux_arm64
