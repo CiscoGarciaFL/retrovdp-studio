@@ -163,6 +163,18 @@ BatchFrameOutput convertFrame(const BatchFrameInput& frame,
                 .arg(QString::fromStdString(nativeManifest.message)));
     }
 
+    // Legacy exporters intentionally uppercase (and, for some formats, shorten)
+    // their base names. Media packages need one stable frame naming convention
+    // across case-sensitive and case-insensitive filesystems, so keep the
+    // generated extension but restore the lowercase frame base here.
+    const std::string stableBaseName = baseName.toStdString();
+    for (auto& file : nativeManifest.files) {
+        const auto extension = file.fileName.find_last_of('.');
+        if (extension != std::string::npos) {
+            file.fileName = stableBaseName + file.fileName.substr(extension);
+        }
+    }
+
     const QDir stagingDirectory(stagingRoot);
     const QString relativeNativeDirectory = QStringLiteral("native/%1").arg(baseName);
     const auto nativeWritten = imageio::writeExportManifest(
