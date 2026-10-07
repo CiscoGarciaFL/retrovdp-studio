@@ -30,6 +30,7 @@ not maintain a separate numbered engineering roadmap.
 
 | Document | Role |
 | --- | --- |
+| [VIDEO_CLIP_SUPPORT.md](VIDEO_CLIP_SUPPORT.md) | User guide for implemented video probing, frame/audio extraction, clip monitors, recipe conversion, and parallel workers |
 | [INTERFACE_WORKFLOW.md](INTERFACE_WORKFLOW.md) | Implemented desktop workflow and interface verification |
 | [COMMAND_LINE.md](COMMAND_LINE.md) | Implemented CLI syntax, diagnostics, and exit codes |
 | [IMAGE_INPUT.md](IMAGE_INPUT.md) | Input formats, normalization, metadata, and safety limits |

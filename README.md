@@ -159,7 +159,9 @@ processes. The CLI can also normalize and
 convert native JSON, CSV/TSV, and Daphne/Hypseus clip mappings; the native
 schema includes reference loaders for Unity and Godot ports.
 See
-[`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform setup instructions
+[`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform setup instructions,
+[`docs/VIDEO_CLIP_SUPPORT.md`](docs/VIDEO_CLIP_SUPPORT.md) for the complete
+implemented video-clip workflow,
 [`docs/CLIP_MAPS.md`](docs/CLIP_MAPS.md) for mapping interchange, and
 [`docs/BATCH_MODE.md`](docs/BATCH_MODE.md) for the active video, audio,
 clip-mapping, and frame-conversion plan.
