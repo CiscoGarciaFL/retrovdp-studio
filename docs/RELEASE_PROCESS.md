@@ -318,7 +318,8 @@ The ARM64 package job applies the same staged-runtime, dependency,
 filesystem-isolation, installed GUI/CLI, uninstall-cleanup, and host-integrity
 checks as x86-64. A separate clean Ubuntu 24.04 ARM64 job downloads those
 completed artifacts, extracts and audits every ELF machine type, launches the
-AppImage, installs and launches the Debian package, and removes it again. The
+AppImage with the host OpenGL dispatch runtime installed, installs and launches
+the Debian package, and removes it again. The
 official Qt ARM64 runtime requires glibc 2.38 or newer, so Ubuntu 24.04 is the
 declared ARM64 baseline rather than Ubuntu 22.04.
 
