@@ -229,8 +229,8 @@ and QML modules under `/opt/retrovdp-studio`. The macOS DMG and Linux AppImage
 focus on the GUI; matching, versioned CLI archives may be attached when
 terminal installation instructions and architecture coverage are finalized.
 
-Linux ARM64/AArch64 is supported through native builds and package tests on
-Ubuntu 22.04 and 24.04 ARM64 runners. ARM32/armhf, 32-bit Windows, and other
+Linux ARM64/AArch64 is supported through native builds and independent package
+tests on Ubuntu 24.04 ARM64 runners. ARM32/armhf, 32-bit Windows, and other
 architectures are not implied by that support. Every additional architecture
 requires an explicit native build, package, dependency audit, and clean-system
 test matrix before release notes call it supported.
@@ -307,7 +307,7 @@ audit. Packaging tool versions are pinned in release automation.
 ### Linux ARM64 implementation
 
 Linux ARM64 uses the same private-runtime design as x86-64. The release matrix
-builds and tests natively on a pinned Ubuntu 22.04 ARM64 runner with Qt's
+builds and tests natively on a pinned Ubuntu 24.04 ARM64 runner with Qt's
 `linux_arm64` host and `linux_gcc_arm64` architecture. It packages with the
 pinned `linuxdeploy-aarch64.AppImage` and
 `linuxdeploy-plugin-qt-aarch64.AppImage` tools, emits an `aarch64` AppImage and
@@ -316,10 +316,11 @@ manifest and checksum file.
 
 The ARM64 package job applies the same staged-runtime, dependency,
 filesystem-isolation, installed GUI/CLI, uninstall-cleanup, and host-integrity
-checks as x86-64. A separate Ubuntu 24.04 ARM64 job downloads those completed
-artifacts, extracts and audits every ELF machine type, launches the AppImage,
-installs and launches the Debian package, and removes it again. This provides
-native testing on both the glibc 2.34 baseline and a current Ubuntu target.
+checks as x86-64. A separate clean Ubuntu 24.04 ARM64 job downloads those
+completed artifacts, extracts and audits every ELF machine type, launches the
+AppImage, installs and launches the Debian package, and removes it again. The
+official Qt ARM64 runtime requires glibc 2.38 or newer, so Ubuntu 24.04 is the
+declared ARM64 baseline rather than Ubuntu 22.04.
 
 Every new Linux architecture must extend the native runner matrix, Debian
 architecture metadata, AppImage tooling, ELF audit, artifact manifest, and
@@ -483,9 +484,10 @@ configuration and plugin discovery after installation and reboot/logout.
 ## Supported-system policy
 
 The beta supports Windows 10 version 1809 or newer on x64, macOS 13 or newer
-on Intel x86_64 and Apple Silicon arm64, and Linux x86_64 and ARM64 with glibc
-2.34 or newer. Ubuntu 22.04 is the pinned Linux build and package-test
-baseline, with Ubuntu 24.04 providing a second ARM64 package test. X11 is the
+on Intel x86_64 and Apple Silicon arm64, Linux x86_64 with glibc 2.34 or newer,
+and Linux ARM64 with glibc 2.38 or newer. Ubuntu 22.04 is the pinned x86_64
+build and package-test baseline; Ubuntu 24.04 is the pinned ARM64 baseline and
+is also used by a separate clean package-verification job. X11 is the
 automated Linux display-test target. The application itself launched
 successfully during a Kubuntu/Wayland test, but the beta.1 Debian package later
 prevented SDDM from starting its greeter after reboot. Kubuntu/Wayland is not a
@@ -497,9 +499,9 @@ architecture-specific CPU instructions beyond each platform's normal x86_64
 or arm64 baseline are required.
 
 The CI operating system used to produce a Linux release is pinned rather than
-`ubuntu-latest`; it must be old enough for the declared compatibility target.
-The macOS deployment target is explicit in CMake. ARM64 packages are tested on
-both the oldest supported Ubuntu baseline and a current Ubuntu release.
+`ubuntu-latest`; it must match the declared compatibility target. The macOS
+deployment target is explicit in CMake. ARM64 packages are tested again in a
+separate clean job after their release artifacts are uploaded.
 
 ## Clean-system acceptance tests
 
