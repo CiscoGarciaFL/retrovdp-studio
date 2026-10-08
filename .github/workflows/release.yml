@@ -181,7 +181,7 @@ jobs:
       - name: Install Linux package prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libfuse2 libgl1 libopengl0 libxkbcommon-x11-0 \
+          sudo apt-get install --yes libfuse2 libgl1 libegl1 libopengl0 libxkbcommon-x11-0 \
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 xvfb
 
@@ -354,7 +354,7 @@ jobs:
       - name: Install runtime prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libgl1 libopengl0 libxkbcommon-x11-0 \
+          sudo apt-get install --yes libgl1 libegl1 libopengl0 libxkbcommon-x11-0 \
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 xvfb
 
