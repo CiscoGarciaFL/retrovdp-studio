@@ -284,7 +284,6 @@ ApplicationWindow {
 
     ProjectDialog {
         id: projectDialog
-        supportDialog: targetSupportDialog
     }
 
     FileDialog {
@@ -351,6 +350,12 @@ ApplicationWindow {
         text: qsTr("E&xit")
         shortcut: StandardKey.Quit
         onTriggered: window.close()
+    }
+    Action {
+        id: supportedTargetsAction
+        objectName: "supportedTargetsAction"
+        text: qsTr("About &Supported Targets")
+        onTriggered: targetSupportDialog.open()
     }
     Action {
         id: aboutAction
@@ -551,6 +556,11 @@ ApplicationWindow {
         Menu {
             title: qsTr("&Help")
             objectName: "helpMenu"
+            MenuItem {
+                objectName: "supportedTargetsMenuItem"
+                action: supportedTargetsAction
+            }
+            MenuSeparator {}
             MenuItem { action: aboutAction }
         }
     }

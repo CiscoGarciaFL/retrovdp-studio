@@ -3,6 +3,7 @@
 #include "ImageInputController.hpp"
 #include "MediaClipController.hpp"
 #include "MediaBatchController.hpp"
+#include "TargetSupportCatalog.hpp"
 
 #include <QCoreApplication>
 #include <QColor>
@@ -2425,6 +2426,9 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     EditorProjectController editorProject(&controller);
     MediaClipController mediaClip;
     MediaBatchController mediaBatch(&mediaClip, &appPreferences);
+    TargetSupportCatalog targetSupportCatalog(
+        qmlDirectory.absoluteFilePath(
+            QStringLiteral("../../data/target-support/targets.json")));
     editorProject.setActiveTarget(0);
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("imageInput"), &controller);
@@ -2432,6 +2436,8 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     engine.rootContext()->setContextProperty(QStringLiteral("editorProject"), &editorProject);
     engine.rootContext()->setContextProperty(QStringLiteral("mediaClip"), &mediaClip);
     engine.rootContext()->setContextProperty(QStringLiteral("mediaBatch"), &mediaBatch);
+    engine.rootContext()->setContextProperty(QStringLiteral("targetSupportCatalog"),
+                                             &targetSupportCatalog);
     const QString mainQml = QDir(QStringLiteral(RETROVDP_QML_DIR))
                                 .filePath(QStringLiteral("Main.qml"));
     engine.load(QUrl::fromLocalFile(mainQml));
@@ -2609,13 +2615,13 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     test.expect(projectSettingsOpened && projectDialog != nullptr
                     && waitFor([&] { return projectDialog->property("visible").toBool(); })
                     && window->findChild<QObject*>(QStringLiteral("projectNameField")) != nullptr
-                    && targetSupportButton != nullptr
+                    && targetSupportButton == nullptr
                     && targetSupportDialog != nullptr
                     && tmsProjectTarget != nullptr
                     && f18aProjectTarget != nullptr
                     && v9938ProjectTarget != nullptr
                     && window->findChild<QObject*>(QStringLiteral("trs80ProjectTarget")) != nullptr,
-                "Project Settings should edit the project name and grouped target roadmap");
+                "Project Settings should edit the project name and grouped target roadmap without catalog navigation");
     test.expect(tmsProjectTarget != nullptr
                     && tmsProjectTarget->property("text").toString()
                         == QStringLiteral("TMS9918A")
@@ -2647,6 +2653,24 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                         == QStringLiteral("MOS VIC (VIC-20)"),
                 "implemented project targets should be enabled and omit roadmap status text");
     if (projectDialog != nullptr) QMetaObject::invokeMethod(projectDialog, "close");
+    QObject* supportedTargetsAction = window->findChild<QObject*>(
+        QStringLiteral("supportedTargetsAction"));
+    QObject* supportedTargetsMenuItem = window->findChild<QObject*>(
+        QStringLiteral("supportedTargetsMenuItem"));
+    const bool supportedTargetsOpened = supportedTargetsAction != nullptr
+        && QMetaObject::invokeMethod(supportedTargetsAction, "trigger");
+    test.expect(supportedTargetsOpened && supportedTargetsMenuItem != nullptr
+                    && targetSupportDialog != nullptr
+                    && waitFor([&] {
+                        return targetSupportDialog->property("visible").toBool();
+                    })
+                    && targetSupportDialog->property("catalogReady").toBool()
+                    && targetSupportDialog->property("targetCount").toInt() == 12
+                    && window->findChild<QObject*>(
+                           QStringLiteral("targetSupportCatalogGrid")) != nullptr,
+                "Help should open the complete bundled Supported Targets catalog immediately");
+    if (targetSupportDialog != nullptr)
+        QMetaObject::invokeMethod(targetSupportDialog, "close");
     QObject* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
     const bool aboutOpened = aboutAction != nullptr
         && QMetaObject::invokeMethod(aboutAction, "trigger");
@@ -4583,6 +4607,11 @@ void testTargetSupportDeliverables(TestContext& test)
                                .absoluteFilePath(QStringLiteral("../..")));
     const QString catalogPath = projectRoot.filePath(
         QStringLiteral("data/target-support/targets.json"));
+    const TargetSupportCatalog bundledCatalog(catalogPath);
+    test.expect(bundledCatalog.ready()
+                    && bundledCatalog.errorMessage().isEmpty()
+                    && bundledCatalog.targets().size() == 12,
+                "the application catalog loader should synchronously expose all bundled targets");
     QFile catalogFile(catalogPath);
     test.expect(catalogFile.open(QIODevice::ReadOnly),
                 "target support catalog should be shipped with the project");

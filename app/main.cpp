@@ -3,6 +3,7 @@
 #include "ImageInputController.hpp"
 #include "MediaClipController.hpp"
 #include "MediaBatchController.hpp"
+#include "TargetSupportCatalog.hpp"
 
 #include <QApplication>
 #include <QColor>
@@ -124,12 +125,16 @@ int main(int argc, char* argv[])
     EditorProjectController editorProject(&imageInput);
     MediaClipController mediaClip;
     MediaBatchController mediaBatch(&mediaClip, &appPreferences);
+    TargetSupportCatalog targetSupportCatalog(QStringLiteral(
+        ":/qt/qml/RetroVDPStudio/data/target-support/targets.json"));
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("imageInput"), &imageInput);
     engine.rootContext()->setContextProperty(QStringLiteral("appPreferences"), &appPreferences);
     engine.rootContext()->setContextProperty(QStringLiteral("editorProject"), &editorProject);
     engine.rootContext()->setContextProperty(QStringLiteral("mediaClip"), &mediaClip);
     engine.rootContext()->setContextProperty(QStringLiteral("mediaBatch"), &mediaBatch);
+    engine.rootContext()->setContextProperty(QStringLiteral("targetSupportCatalog"),
+                                             &targetSupportCatalog);
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,

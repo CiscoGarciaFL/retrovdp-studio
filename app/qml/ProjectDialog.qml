@@ -7,8 +7,6 @@ Dialog {
     objectName: "projectDialog"
 
     property bool creating: false
-    property var supportDialog
-
     title: creating ? qsTr("New Project") : qsTr("Project Settings")
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
@@ -143,17 +141,6 @@ Dialog {
                 wrapMode: Text.WordWrap
                 color: palette.placeholderText
                 text: qsTr("Implemented targets are available in the Project Bar. Target selection is persisted with the project and controls its hardware-aware editors.")
-            }
-
-            Button {
-                objectName: "targetSupportButton"
-                Layout.alignment: Qt.AlignLeft
-                text: qsTr("View target support")
-                onClicked: {
-                    root.close()
-                    if (root.supportDialog)
-                        Qt.callLater(function() { root.supportDialog.open() })
-                }
             }
 
             Label {

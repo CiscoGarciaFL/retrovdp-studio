@@ -5,42 +5,25 @@ import QtQuick.Layouts
 Dialog {
     id: root
     objectName: "targetSupportDialog"
-    title: qsTr("Target support")
+    title: qsTr("About Supported Targets")
     modal: true
     standardButtons: Dialog.Close
     width: Math.min(parent ? parent.width - 36 : 980, 980)
     height: Math.min(parent ? parent.height - 36 : 760, 760)
 
-    property var targets: []
-    property bool catalogLoaded: false
-    readonly property string catalogUrl: "qrc:/qt/qml/RetroVDPStudio/data/target-support/targets.json"
+    readonly property var targets: targetSupportCatalog.targets
+    readonly property bool catalogReady: targetSupportCatalog.ready
+    readonly property int targetCount: targets.length
 
     function bundledImageUrl(relativePath) {
         return relativePath ? Qt.resolvedUrl("../" + relativePath) : ""
     }
 
-    function loadCatalog() {
-        const request = new XMLHttpRequest()
-        request.onreadystatechange = function() {
-            if (request.readyState !== XMLHttpRequest.DONE)
-                return
-            if (request.status === 0 || (request.status >= 200 && request.status < 300)) {
-                try {
-                    const catalog = JSON.parse(request.responseText)
-                    root.targets = catalog.targets || []
-                    root.catalogLoaded = true
-                } catch (error) {
-                    root.targets = []
-                }
-            }
-        }
-        request.open("GET", root.catalogUrl)
-        request.send()
-    }
-
-    onOpened: {
-        if (!catalogLoaded)
-            loadCatalog()
+    function attributions(images) {
+        const entries = []
+        for (let index = 0; index < images.length; ++index)
+            entries.push(images[index].credit + " — " + images[index].license)
+        return entries.join("  |  ")
     }
 
     contentItem: ColumnLayout {
@@ -50,14 +33,15 @@ Dialog {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             color: palette.placeholderText
-            text: qsTr("Implemented targets are summarized with bundled real consumer-product photographs and work fully offline. Source pages remain available for credit and reference; online loading is offered only if a bundled image cannot be decoded.")
+            text: qsTr("Implemented targets are summarized with built-in real consumer-product photographs. The complete catalog works offline; source pages are optional attribution and read-more links and are never checked automatically.")
         }
 
         Label {
-            visible: !root.catalogLoaded
+            visible: !root.catalogReady
             Layout.fillWidth: true
-            text: qsTr("Loading target catalog…")
-            color: palette.placeholderText
+            text: qsTr("The bundled target catalog could not be loaded: %1").arg(targetSupportCatalog.errorMessage)
+            color: palette.brightText
+            wrapMode: Text.WordWrap
         }
 
         ScrollView {
@@ -68,9 +52,10 @@ Dialog {
 
             GridView {
                 id: catalogGrid
+                objectName: "targetSupportCatalogGrid"
                 width: catalogScroll.availableWidth
                 cellWidth: Math.max(320, Math.floor(width / 2))
-                cellHeight: 330
+                cellHeight: 360
                 model: root.targets
                 clip: true
 
@@ -131,12 +116,9 @@ Dialog {
                                         Image {
                                             id: photo
                                             objectName: "targetSupportPhoto"
-                                            property bool useOnlineSource: false
                                             anchors.fill: parent
                                             anchors.margins: 2
-                                            source: useOnlineSource
-                                                    ? modelData.url
-                                                    : root.bundledImageUrl(modelData.local)
+                                            source: root.bundledImageUrl(modelData.local)
                                             asynchronous: false
                                             cache: true
                                             fillMode: Image.PreserveAspectFit
@@ -151,15 +133,7 @@ Dialog {
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: Qt.openUrlExternally(modelData.sourcePage)
                                             ToolTip.visible: containsMouse
-                                            ToolTip.text: qsTr("Open photo source")
-                                        }
-
-                                        Button {
-                                            anchors.centerIn: parent
-                                            visible: photo.status === Image.Error
-                                                     && !photo.useOnlineSource
-                                            text: qsTr("Load online")
-                                            onClicked: photo.useOnlineSource = true
+                                            ToolTip.text: qsTr("%1\n%2\nOpen attribution and source page").arg(modelData.credit).arg(modelData.license)
                                         }
                                     }
                                 }
@@ -192,6 +166,25 @@ Dialog {
                             elide: Text.ElideRight
                             color: palette.placeholderText
                             font.pixelSize: 10
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("Photos: %1").arg(root.attributions(modelData.images || []))
+                            wrapMode: Text.WordWrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                            color: palette.placeholderText
+                            font.pixelSize: 9
+                            ToolTip.visible: attributionMouse.containsMouse
+                            ToolTip.text: text + qsTr("\nClick a photograph to open its source page.")
+
+                            MouseArea {
+                                id: attributionMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                acceptedButtons: Qt.NoButton
+                            }
                         }
                     }
                 }
