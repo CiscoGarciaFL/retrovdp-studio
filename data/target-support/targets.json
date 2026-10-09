@@ -114,8 +114,8 @@
       "modes": ["super-nes-mode-0-background", "super-nes-mode-1-background", "super-nes-mode-3-background"],
       "workspaces": {"screenImage": "native BG1 Mode 0/1/3 conversion", "character": "native mode-selected 2/4/8bpp patterns and map", "sprite": "native 128-entry 4bpp OAM authoring"},
       "images": [
-        {"local": "assets/targets/super-nes-ppu/super-famicom-set.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo-Super-Famicom-Set-FL.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Nintendo-Super-Famicom-Set-FL.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"},
-        {"local": "assets/targets/super-nes-ppu/snes-console-set.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/SNES-Mod1-Console-Set.jpg/960px-SNES-Mod1-Console-Set.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:SNES-Mod1-Console-Set.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}
+        {"local": "assets/targets/super-nes-ppu/snes-console-set.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/SNES-Mod1-Console-Set.jpg/960px-SNES-Mod1-Console-Set.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:SNES-Mod1-Console-Set.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"},
+        {"local": "assets/targets/super-nes-ppu/super-famicom-set.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo-Super-Famicom-Set-FL.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Nintendo-Super-Famicom-Set-FL.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}
       ]
     },
     {
