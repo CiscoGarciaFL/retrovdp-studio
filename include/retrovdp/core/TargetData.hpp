@@ -28,7 +28,7 @@ enum class PaletteError : std::uint8_t {
 
 class Palette final {
 public:
-    static constexpr std::size_t maximumColorCount = 16;
+    static constexpr std::size_t maximumColorCount = 256;
 
     [[nodiscard]] static std::optional<Palette>
     create(std::vector<RgbColor> colors, PaletteError* error = nullptr);
@@ -55,6 +55,8 @@ enum class TargetTableRole : std::uint8_t {
     ScanlinePalettes,
     Framebuffer,
     TileMap,
+    AttributeMap,
+    ObjectAttributes,
     DisplayRegisters,
 };
 

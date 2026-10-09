@@ -14,6 +14,9 @@ enum class TargetProfileId : std::uint8_t {
     HuC6270,
     VicII,
     Vic,
+    GameBoy,
+    GameBoyColor,
+    SuperNes,
 };
 
 enum class ConversionMode : std::uint8_t {
@@ -48,6 +51,11 @@ enum class ConversionMode : std::uint8_t {
     VicIIMulticolorBitmap,
     VicHiresCharacter,
     VicMulticolorCharacter,
+    GameBoyBackground,
+    GameBoyColorBackground,
+    SuperNesMode0Background,
+    SuperNesMode1Background,
+    SuperNesMode3Background,
 };
 
 enum class DitherMode : std::uint8_t {

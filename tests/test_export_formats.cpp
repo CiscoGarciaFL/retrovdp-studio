@@ -298,6 +298,11 @@ void testAllTargetLayouts(TestContext& test)
         core::ConversionMode::VicIIMulticolorBitmap,
         core::ConversionMode::VicHiresCharacter,
         core::ConversionMode::VicMulticolorCharacter,
+        core::ConversionMode::GameBoyBackground,
+        core::ConversionMode::GameBoyColorBackground,
+        core::ConversionMode::SuperNesMode0Background,
+        core::ConversionMode::SuperNesMode1Background,
+        core::ConversionMode::SuperNesMode3Background,
     };
     const std::vector<formats::ExportFormat> tableFormats{
         formats::ExportFormat::Raw,
@@ -368,6 +373,17 @@ void testAllTargetLayouts(TestContext& test)
                                 && findFile(manifest, "LAYOUT.SCR") != nullptr
                                 && findFile(manifest, "LAYOUT.REG") != nullptr,
                             "raw VIC and VIC-II exports should use native asset extensions");
+            }
+            const bool ppuAssets = mode >= core::ConversionMode::GameBoyBackground
+                && mode <= core::ConversionMode::SuperNesMode3Background;
+            if (format == formats::ExportFormat::Raw && ppuAssets) {
+                test.expect(findFile(manifest, "LAYOUT.TILES") != nullptr
+                                && findFile(manifest, "LAYOUT.MAP") != nullptr
+                                && findFile(manifest, "LAYOUT.REG") != nullptr
+                                && findFile(manifest,
+                                    mode >= core::ConversionMode::SuperNesMode0Background
+                                        ? "LAYOUT.CGRAM" : "LAYOUT.PAL") != nullptr,
+                            "raw Nintendo PPU exports should use native asset extensions");
             }
         }
         test.expect(formats::isExportApplicable(formats::ExportFormat::Png, mode),

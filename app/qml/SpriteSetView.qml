@@ -226,7 +226,8 @@ Item {
                             readonly property int colorIndex: {
                                 if (value === 0)
                                     return 0
-                                if (editorProject.editScope === 0) {
+                                if (editorProject.editScope === 0
+                                        && editorProject.activeTargetInfo.spriteMaximumColorDepth <= 1) {
                                     const placement = root.placements[spriteCell.index]
                                     return placement ? placement.color : 15
                                 }

@@ -27,6 +27,9 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(bool huc6270Enabled READ huc6270Enabled NOTIFY projectChanged)
     Q_PROPERTY(bool vicIiEnabled READ vicIiEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool vicEnabled READ vicEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool gameBoyEnabled READ gameBoyEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool gameBoyColorEnabled READ gameBoyColorEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool superNesEnabled READ superNesEnabled NOTIFY projectChanged)
     Q_PROPERTY(QStringList plannedTargetIds READ plannedTargetIds NOTIFY projectChanged)
     Q_PROPERTY(int activeTarget READ activeTarget WRITE setActiveTarget NOTIFY projectChanged)
     Q_PROPERTY(QVariantList supportedTargets READ supportedTargets NOTIFY projectChanged)
@@ -111,6 +114,9 @@ public:
     [[nodiscard]] bool huc6270Enabled() const { return huc6270Enabled_; }
     [[nodiscard]] bool vicIiEnabled() const { return vicIiEnabled_; }
     [[nodiscard]] bool vicEnabled() const { return vicEnabled_; }
+    [[nodiscard]] bool gameBoyEnabled() const { return gameBoyEnabled_; }
+    [[nodiscard]] bool gameBoyColorEnabled() const { return gameBoyColorEnabled_; }
+    [[nodiscard]] bool superNesEnabled() const { return superNesEnabled_; }
     [[nodiscard]] QStringList plannedTargetIds() const { return plannedTargetIds_; }
     [[nodiscard]] int activeTarget() const;
     [[nodiscard]] QVariantList supportedTargets() const;
@@ -323,6 +329,7 @@ public:
     Q_INVOKABLE bool saveRecipe(const QUrl& fileUrl);
     Q_INVOKABLE bool loadRecipe(const QUrl& fileUrl);
     Q_INVOKABLE bool exportGenesisCharacterAssets(const QUrl& directoryUrl);
+    Q_INVOKABLE bool exportNintendoEditorAssets(const QUrl& directoryUrl);
     Q_INVOKABLE void clearStatus();
 
 signals:
@@ -376,16 +383,16 @@ private:
         bool priority{};
     };
     struct SpritePattern {
-        std::vector<std::uint8_t> baselinePixels = std::vector<std::uint8_t>(2048);
-        std::vector<std::uint8_t> f18aPixels = std::vector<std::uint8_t>(2048);
+        std::vector<std::uint8_t> baselinePixels = std::vector<std::uint8_t>(4096);
+        std::vector<std::uint8_t> f18aPixels = std::vector<std::uint8_t>(4096);
         bool f18aOverride{};
     };
     struct SpriteSet {
         QString name;
         std::array<SpritePattern, 64> patterns8;
         std::array<SpritePattern, 64> patterns16;
-        std::array<SpritePattern, 80> patternsGenesis;
-        std::array<SpritePlacement, 80> placements;
+        std::array<SpritePattern, 128> patternsGenesis;
+        std::array<SpritePlacement, 128> placements;
     };
     struct SpriteHistoryEntry {
         int setIndex{};
@@ -406,7 +413,7 @@ private:
         int height{8};
         int colorDepth{1};
         bool enhanced{};
-        std::vector<std::uint8_t> pixels = std::vector<std::uint8_t>(2048);
+        std::vector<std::uint8_t> pixels = std::vector<std::uint8_t>(4096);
     };
 
     [[nodiscard]] CharacterSet makeCharacterSet(int ordinal) const;
@@ -442,8 +449,13 @@ private:
     [[nodiscard]] bool usesGenesisMode5Editor() const;
     [[nodiscard]] bool usesHuC6270Editor() const;
     [[nodiscard]] bool usesVicIIEditor() const;
+    [[nodiscard]] bool usesGameBoyEditor() const;
+    [[nodiscard]] bool usesGameBoyColorEditor() const;
+    [[nodiscard]] bool usesSuperNesEditor() const;
     [[nodiscard]] bool usesCompoundSpriteEditor() const;
     [[nodiscard]] bool usesIndexed4BppEditor() const;
+    [[nodiscard]] bool usesIndexedSpriteEditor() const;
+    [[nodiscard]] int activeCharacterColorDepth() const;
     [[nodiscard]] int normalizedSpriteSize(int value) const;
     [[nodiscard]] bool usesPerSpriteSizeEditor() const;
     void ensureIndexedCharacterOverride(CharacterPattern& pattern) const;
@@ -464,6 +476,9 @@ private:
     bool huc6270Enabled_{};
     bool vicIiEnabled_{};
     bool vicEnabled_{};
+    bool gameBoyEnabled_{};
+    bool gameBoyColorEnabled_{};
+    bool superNesEnabled_{};
     QStringList plannedTargetIds_;
     int previewTarget_{};
     int editScope_{};

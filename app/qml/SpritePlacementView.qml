@@ -160,6 +160,7 @@ Item {
                             height: root.zoomScale
                             color: value === 0 ? "transparent"
                                   : editorProject.editScope === 0
+                                    && editorProject.activeTargetInfo.spriteMaximumColorDepth <= 1
                                     ? root.paletteColor(
                                           spriteMarker.slotData.color)
                                     : root.paletteColor(value)

@@ -128,6 +128,37 @@ constexpr std::array vicCharacterTables{
     TargetTableLayout{TargetTableRole::Color, 506U},
     TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
 };
+constexpr std::array gameBoyBackgroundTables{
+    TargetTableLayout{TargetTableRole::Pattern, 4096U},
+    TargetTableLayout{TargetTableRole::TileMap, 1024U},
+    TargetTableLayout{TargetTableRole::Palette, 3U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 12U},
+};
+constexpr std::array gameBoyColorBackgroundTables{
+    TargetTableLayout{TargetTableRole::Pattern, 8192U},
+    TargetTableLayout{TargetTableRole::TileMap, 1024U},
+    TargetTableLayout{TargetTableRole::AttributeMap, 1024U},
+    TargetTableLayout{TargetTableRole::Palette, 128U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 12U},
+};
+constexpr std::array superNesMode0BackgroundTables{
+    TargetTableLayout{TargetTableRole::Pattern, 16384U},
+    TargetTableLayout{TargetTableRole::TileMap, 2048U},
+    TargetTableLayout{TargetTableRole::Palette, 512U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 64U},
+};
+constexpr std::array superNesMode1BackgroundTables{
+    TargetTableLayout{TargetTableRole::Pattern, 32768U},
+    TargetTableLayout{TargetTableRole::TileMap, 2048U},
+    TargetTableLayout{TargetTableRole::Palette, 512U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 64U},
+};
+constexpr std::array superNesMode3BackgroundTables{
+    TargetTableLayout{TargetTableRole::Pattern, 57344U},
+    TargetTableLayout{TargetTableRole::TileMap, 2048U},
+    TargetTableLayout{TargetTableRole::Palette, 512U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 64U},
+};
 
 void setPaletteError(PaletteError* destination, PaletteError error)
 {
@@ -151,6 +182,8 @@ RegionRoleId targetTableRoleId(TargetTableRole role)
     case TargetTableRole::ScanlinePalettes: return makeRegionRoleId("scanline-palettes");
     case TargetTableRole::Framebuffer: return makeRegionRoleId("framebuffer");
     case TargetTableRole::TileMap: return makeRegionRoleId("tile-map");
+    case TargetTableRole::AttributeMap: return makeRegionRoleId("attribute-map");
+    case TargetTableRole::ObjectAttributes: return makeRegionRoleId("object-attributes");
     case TargetTableRole::DisplayRegisters: return makeRegionRoleId("display-registers");
     }
     throw std::out_of_range("unknown target table role");
@@ -169,6 +202,7 @@ std::optional<TargetTableRole> targetTableRole(std::string_view id)
         TargetTableRole::FixedPattern, TargetTableRole::Palette,
         TargetTableRole::ScanlinePalettes,
         TargetTableRole::Framebuffer, TargetTableRole::TileMap,
+        TargetTableRole::AttributeMap, TargetTableRole::ObjectAttributes,
         TargetTableRole::DisplayRegisters,
     };
     for (const auto role : roles) {
@@ -244,6 +278,11 @@ std::span<const TargetTableLayout> expectedTargetTables(ConversionMode mode)
     case ConversionMode::VicIIMulticolorBitmap: return vicIIMulticolorBitmapTables;
     case ConversionMode::VicHiresCharacter:
     case ConversionMode::VicMulticolorCharacter: return vicCharacterTables;
+    case ConversionMode::GameBoyBackground: return gameBoyBackgroundTables;
+    case ConversionMode::GameBoyColorBackground: return gameBoyColorBackgroundTables;
+    case ConversionMode::SuperNesMode0Background: return superNesMode0BackgroundTables;
+    case ConversionMode::SuperNesMode1Background: return superNesMode1BackgroundTables;
+    case ConversionMode::SuperNesMode3Background: return superNesMode3BackgroundTables;
     }
     return {};
 }

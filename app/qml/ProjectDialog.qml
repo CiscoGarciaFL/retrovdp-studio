@@ -7,6 +7,7 @@ Dialog {
     objectName: "projectDialog"
 
     property bool creating: false
+    property var supportDialog
 
     title: creating ? qsTr("New Project") : qsTr("Project Settings")
     modal: true
@@ -57,7 +58,8 @@ Dialog {
     function selectedImplementedTargetCount() {
         const controls = [tms9918aTarget, f18aTarget, v9938Target, v9958Target,
                           segaSmsTarget, segaGenesisTarget, huc6270Target,
-                          vicIiTarget, vicTarget]
+                          vicIiTarget, vicTarget, gameBoyTarget,
+                          gameBoyColorTarget, superNesTarget]
         let count = 0
         for (let index = 0; index < controls.length; ++index) {
             if (controls[index].checked)
@@ -90,6 +92,9 @@ Dialog {
         huc6270Target.checked = editorProject.huc6270Enabled
         vicIiTarget.checked = editorProject.vicIiEnabled
         vicTarget.checked = editorProject.vicEnabled
+        gameBoyTarget.checked = editorProject.gameBoyEnabled
+        gameBoyColorTarget.checked = editorProject.gameBoyColorEnabled
+        superNesTarget.checked = editorProject.superNesEnabled
         open()
         projectNameField.forceActiveFocus()
     }
@@ -138,6 +143,17 @@ Dialog {
                 wrapMode: Text.WordWrap
                 color: palette.placeholderText
                 text: qsTr("Implemented targets are available in the Project Bar. Target selection is persisted with the project and controls its hardware-aware editors.")
+            }
+
+            Button {
+                objectName: "targetSupportButton"
+                Layout.alignment: Qt.AlignLeft
+                text: qsTr("View target support")
+                onClicked: {
+                    root.close()
+                    if (root.supportDialog)
+                        Qt.callLater(function() { root.supportDialog.open() })
+                }
             }
 
             Label {
@@ -208,20 +224,20 @@ Dialog {
             CheckBox {
                 id: gameBoyTarget
                 objectName: "gameBoyProjectTarget"
-                text: qsTr("Nintendo Game Boy — Planned")
-                enabled: false
+                text: qsTr("Nintendo Game Boy")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: gameBoyColorTarget
                 objectName: "gameBoyColorProjectTarget"
-                text: qsTr("Nintendo Game Boy Color — Planned")
-                enabled: false
+                text: qsTr("Nintendo Game Boy Color")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: superNesTarget
                 objectName: "superNesProjectTarget"
-                text: qsTr("Super NES 5C77 / 5C78 — Planned")
-                enabled: false
+                text: qsTr("Super NES 5C77 / 5C78")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
 
             Label {

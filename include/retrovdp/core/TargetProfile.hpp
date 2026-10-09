@@ -18,6 +18,7 @@ enum class TargetProfileStatus : std::uint8_t {
 
 enum class TargetKind : std::uint8_t {
     VideoDisplayProcessor,
+    PictureProcessor,
 };
 
 enum class PaletteModel : std::uint8_t {

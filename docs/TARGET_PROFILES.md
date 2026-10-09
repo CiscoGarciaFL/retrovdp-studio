@@ -21,7 +21,8 @@ source library
 ```
 
 TMS9918A, F18A, V9938, V9958, Sega Master System, Sega Genesis/Mega Drive,
-NEC/Hudson HuC6270, MOS VIC-II, and MOS VIC are implemented target profiles.
+NEC/Hudson HuC6270, MOS VIC-II, MOS VIC, Nintendo Game Boy, Nintendo Game Boy
+Color, and Super NES are implemented target profiles.
 The Yamaha profiles expose their native bitmap modes through the
 same registered target contract. The Master System profile exposes native
 Mode 4 at 256×192, 256×224, and PAL 256×240, with RGB222 CRAM, planar tile,
@@ -33,8 +34,11 @@ VDP-register regions. HuC6270 exposes 256×224 and 320×224 tiled backgrounds,
 exposes high-resolution and multicolor character and bitmap modes; VIC exposes
 high-resolution and multicolor character modes. Their fixed-palette previews
 are explicitly revision-dependent, and their RAW outputs use native character,
-bitmap, screen, color-RAM, and register regions. Additional profiles must use
-that contract rather than adding unrelated UI modes.
+bitmap, screen, color-RAM, and register regions. The Nintendo profiles provide
+native planar Screen Image conversion, map and attribute data, Character
+authoring, Sprite/OAM authoring, RGB555 palette data, and register state.
+Additional profiles must use that contract rather than adding unrelated UI
+modes.
 
 The complete planned hardware catalog, reusable compiler families,
 implementation waves, and per-target acceptance gates are maintained in

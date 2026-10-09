@@ -10,6 +10,7 @@
 #include "retrovdp/core/ImageAdjustments.hpp"
 #include "retrovdp/core/ImageTransform.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
+#include "retrovdp/core/NintendoPpuConverter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/RgbImage.hpp"
 #include "retrovdp/core/SegaGenesisVdpConverter.hpp"
@@ -99,6 +100,7 @@ using retrovdp::core::convertGreyscaleBitmap9918;
 using retrovdp::core::convertHalfMulticolor9918;
 using retrovdp::core::convertHuC6270Background;
 using retrovdp::core::convertMulticolor9918;
+using retrovdp::core::convertNintendoPpu;
 using retrovdp::core::defaultBitmap9918Palette;
 using retrovdp::core::ditherConfiguration;
 using retrovdp::core::expectedTargetTables;
@@ -1574,8 +1576,8 @@ void testConversionMemoryEstimate(TestContext &test)
 void testTargetProfiles(TestContext &test)
 {
     const auto profiles = retrovdp::core::targetProfiles();
-    test.expect(profiles.size() == 9,
-                "the registry should publish the implemented VDP profiles");
+    test.expect(profiles.size() == 12,
+                "the registry should publish every implemented VDP and PPU profile");
 
     const auto& tms9918 = retrovdp::core::targetProfile(TargetProfileId::Tms9918A);
     const auto& f18a = retrovdp::core::targetProfile(TargetProfileId::F18A);
@@ -1720,7 +1722,7 @@ void testTargetProfiles(TestContext &test)
                 "stable IDs should reject ambiguous separators");
 
     const auto modes = retrovdp::core::displayModes();
-    test.expect(modes.size() == 31 && retrovdp::core::validateRegistry(),
+    test.expect(modes.size() == 36 && retrovdp::core::validateRegistry(),
                 "the target and display-mode registries should validate as one contract");
     const auto& f18aMode = retrovdp::core::displayMode(
         ConversionMode::PalettedBitmapF18A);
@@ -1828,6 +1830,58 @@ void testTargetProfiles(TestContext &test)
     test.expect(retrovdp::core::validateRegistry(profiles, invalidPrimaryModes).error
                     == retrovdp::core::RegistryError::PrimaryTargetDoesNotSupportMode,
                 "registry validation should reject a primary target that cannot compile its mode");
+}
+
+void testNintendoPpuConversion(TestContext& test)
+{
+    struct ModeCase {
+        ConversionMode mode;
+        TargetProfileId profile;
+        std::uint32_t width;
+        std::uint32_t height;
+        std::size_t tableCount;
+        std::size_t patternBytes;
+    };
+    constexpr std::array cases{
+        ModeCase{ConversionMode::GameBoyBackground, TargetProfileId::GameBoy,
+                 160, 144, 4, 4096},
+        ModeCase{ConversionMode::GameBoyColorBackground, TargetProfileId::GameBoyColor,
+                 160, 144, 5, 8192},
+        ModeCase{ConversionMode::SuperNesMode0Background, TargetProfileId::SuperNes,
+                 256, 224, 4, 16384},
+        ModeCase{ConversionMode::SuperNesMode1Background, TargetProfileId::SuperNes,
+                 256, 224, 4, 32768},
+        ModeCase{ConversionMode::SuperNesMode3Background, TargetProfileId::SuperNes,
+                 256, 224, 4, 57344},
+    };
+    for (const auto& modeCase : cases) {
+        auto source = RgbImage::createTightlyPacked(
+            modeCase.width, modeCase.height, PixelFormat::Rgb888);
+        test.expect(source.has_value(), "the Nintendo PPU test source should allocate");
+        if (!source) continue;
+        for (std::uint32_t y = 0; y < source->height(); ++y) {
+            auto row = source->row(y);
+            for (std::uint32_t x = 0; x < source->width(); ++x) {
+                const std::size_t offset = static_cast<std::size_t>(x) * 3U;
+                row[offset] = static_cast<std::uint8_t>((x * 255U) / source->width());
+                row[offset + 1U] = static_cast<std::uint8_t>((y * 255U) / source->height());
+                row[offset + 2U] = static_cast<std::uint8_t>((x + y) & 0xffU);
+            }
+        }
+        ConversionSettings settings;
+        settings.targetProfile = modeCase.profile;
+        settings.mode = modeCase.mode;
+        settings.dither = DitherMode::None;
+        const ConversionResult result = convertNintendoPpu(*source, settings);
+        test.expect(result.succeeded() && result.preview.has_value()
+                        && result.target.has_value()
+                        && result.target->profile == modeCase.profile
+                        && result.target->tables.size() == modeCase.tableCount
+                        && result.target->tables.front().role == TargetTableRole::Pattern
+                        && result.target->tables.front().bytes.size() == modeCase.patternBytes
+                        && validateTargetTables(*result.target),
+                    "Nintendo PPU conversion should emit a validated native memory image");
+    }
 }
 
 void testYamahaBitmapConversion(TestContext &test)
@@ -2958,6 +3012,7 @@ int main(int argc, char *argv[])
     testSegaGenesisMode5Conversion(test);
     testHuC6270Conversion(test);
     testCommodoreVdpConversion(test);
+    testNintendoPpuConversion(test);
     testImageAdjustments(test);
     testPaletteSelection(test);
     testRgbImage(test);

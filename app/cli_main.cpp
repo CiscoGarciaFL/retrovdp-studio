@@ -125,7 +125,7 @@ bool loadRecipe(const QString& path,
 
     settings.mode = static_cast<core::ConversionMode>(std::clamp(
         conversion.value(QStringLiteral("mode")).toInt(0), 0,
-        static_cast<int>(core::ConversionMode::VicMulticolorCharacter)));
+        static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
     const auto savedTarget = core::targetProfileId(
         conversion.value(QStringLiteral("targetProfile")).toString().toStdString());
     settings.targetProfile = core::effectiveTargetProfile(
