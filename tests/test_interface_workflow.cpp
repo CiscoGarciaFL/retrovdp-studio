@@ -1624,6 +1624,98 @@ void testEditorProjectRecipe(TestContext& test)
                     && !vicProject.spriteModeAvailable(),
                 "a VIC-20 project should expose its 22x23 character display without synthetic sprites");
 
+    ImageInputController gameBoyImage;
+    gameBoyImage.setAutoUpdate(false);
+    EditorProjectController gameBoyProject(&gameBoyImage);
+    gameBoyProject.configureProjectWithTargets(
+        QStringLiteral("Game Boy Campaign"), false, false,
+        QStringList{QStringLiteral("game-boy-ppu")});
+    gameBoyProject.setSpriteDrawingColorIndex(3);
+    gameBoyProject.paintSpritePixel(0, 0, 8, 0, 0, true);
+    const QVariantList gameBoySprite = gameBoyProject.spritePatternPixels(0, 0, 8);
+    QTemporaryDir gameBoyDirectory;
+    const bool gameBoyExported = gameBoyDirectory.isValid()
+        && gameBoyProject.exportNintendoEditorAssets(
+            QUrl::fromLocalFile(gameBoyDirectory.path()));
+    test.expect(gameBoyProject.gameBoyEnabled()
+                    && gameBoyProject.activeTarget()
+                        == static_cast<int>(retrovdp::core::TargetProfileId::GameBoy)
+                    && gameBoyProject.characterPatternsPerSet() == 384
+                    && gameBoyProject.characterMapColumns() == 32
+                    && gameBoyProject.activeSpriteColorDepth() == 2
+                    && gameBoyProject.spritePatternsPerSet() == 40
+                    && gameBoySprite.at(0).toInt() == 3
+                    && gameBoyExported
+                    && QFileInfo(gameBoyDirectory.filePath(
+                           QStringLiteral("GAME_BOY_CAMPAIGN.CHR"))).size() == 6144
+                    && QFileInfo(gameBoyDirectory.filePath(
+                           QStringLiteral("GAME_BOY_CAMPAIGN.OAM"))).size() == 160,
+                "Game Boy editors and native export should retain 2bpp tiles, maps, and 40-entry OAM");
+
+    ImageInputController gameBoyColorImage;
+    gameBoyColorImage.setAutoUpdate(false);
+    EditorProjectController gameBoyColorProject(&gameBoyColorImage);
+    gameBoyColorProject.configureProjectWithTargets(
+        QStringLiteral("Game Boy Color Campaign"), false, false,
+        QStringList{QStringLiteral("game-boy-color-ppu")});
+    gameBoyColorProject.setCharacterPaletteBank(7);
+    gameBoyColorProject.setActiveSpritePaletteBank(7);
+    QTemporaryDir gameBoyColorDirectory;
+    const bool gameBoyColorExported = gameBoyColorDirectory.isValid()
+        && gameBoyColorProject.exportNintendoEditorAssets(
+            QUrl::fromLocalFile(gameBoyColorDirectory.path()));
+    test.expect(gameBoyColorProject.gameBoyColorEnabled()
+                    && gameBoyColorProject.characterPatternsPerSet() == 768
+                    && gameBoyColorProject.characterPaletteBank() == 7
+                    && gameBoyColorProject.activeSpritePaletteBank() == 7
+                    && gameBoyColorProject.characterPaletteColors().size() == 4
+                    && gameBoyColorProject.spritePaletteColors().size() == 4
+                    && gameBoyColorExported
+                    && QFileInfo(gameBoyColorDirectory.filePath(
+                           QStringLiteral("GAME_BOY_COLOR_CAMPAIGN.ATTR"))).size() == 1024
+                    && QFileInfo(gameBoyColorDirectory.filePath(
+                           QStringLiteral("GAME_BOY_COLOR_CAMPAIGN.PAL"))).size() == 128,
+                "Game Boy Color editors and export should retain VRAM-bank attributes and color palettes");
+
+    ImageInputController superNesImage;
+    superNesImage.setAutoUpdate(false);
+    EditorProjectController superNesProject(&superNesImage);
+    superNesProject.configureProjectWithTargets(
+        QStringLiteral("Super NES Campaign"), false, false,
+        QStringList{QStringLiteral("super-nes-ppu")});
+    superNesProject.setActiveSprite(127);
+    superNesProject.setActiveSpriteSize(16);
+    superNesProject.setActiveSpritePaletteBank(7);
+    QTemporaryDir superNesDirectory;
+    const bool superNesExported = superNesDirectory.isValid()
+        && superNesProject.exportNintendoEditorAssets(
+            QUrl::fromLocalFile(superNesDirectory.path()));
+    superNesImage.setConversionMode(static_cast<int>(
+        retrovdp::core::ConversionMode::SuperNesMode3Background));
+    superNesProject.setCharacterForegroundColorIndex(255);
+    superNesProject.paintCharacterPixel(0, 0, 0, 0, true);
+    const QVariantList superNesMode3Rows = superNesProject.characterPatternRows(0, 0);
+    test.expect(superNesProject.superNesEnabled()
+                    && superNesProject.characterPatternsPerSet() == 1024
+                    && superNesProject.spritePatternsPerSet() == 128
+                    && superNesProject.spritePatternWidth(16) == 16
+                    && superNesProject.activeSpritePaletteBank() == 7
+                    && superNesExported
+                    && QFileInfo(superNesDirectory.filePath(
+                           QStringLiteral("SUPER_NES_CAMPAIGN.CHR"))).size() == 32768
+                    && QFileInfo(superNesDirectory.filePath(
+                           QStringLiteral("SUPER_NES_CAMPAIGN.OAM"))).size() == 544
+                    && QFileInfo(superNesDirectory.filePath(
+                           QStringLiteral("SUPER_NES_CAMPAIGN.SPR"))).size() == 16384
+                    && QFileInfo(superNesDirectory.filePath(
+                           QStringLiteral("SUPER_NES_CAMPAIGN.PAL"))).size() == 512
+                    && superNesProject.activeTargetInfo()
+                           .value(QStringLiteral("characterColorDepth")).toInt() == 8
+                    && superNesProject.characterPaletteColors().size() == 256
+                    && superNesMode3Rows.at(0).toMap()
+                           .value(QStringLiteral("pixels")).toList().at(0).toInt() == 255,
+                "Super NES editors and export should retain mode-selected planar tiles, CGRAM, and 128-entry OAM");
+
     ImageInputController recipeImage;
     recipeImage.setAutoUpdate(false);
     recipeImage.openUrl(QUrl::fromLocalFile(goldenSource(u"source/tiny-rgba.png")));
@@ -2259,8 +2351,8 @@ void testEditorProjectRecipe(TestContext& test)
                     && project.tms9918aEnabled()
                     && project.v9938Enabled()
                     && project.segaSmsEnabled()
-                    && project.plannedTargetIds()
-                           == QStringList{QStringLiteral("game-boy-ppu")}
+                    && project.gameBoyEnabled()
+                    && project.plannedTargetIds().isEmpty()
                     && project.workspaceMode() == 2 && project.f18aEnabled()
                     && project.previewTarget() == 1 && project.editScope() == 1
                     && project.spriteSetNames().size() == 2
@@ -2494,6 +2586,10 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     const bool projectSettingsOpened = projectSettingsAction != nullptr
         && QMetaObject::invokeMethod(projectSettingsAction, "trigger");
     QObject* projectDialog = window->findChild<QObject*>(QStringLiteral("projectDialog"));
+    QObject* targetSupportButton = window->findChild<QObject*>(
+        QStringLiteral("targetSupportButton"));
+    QObject* targetSupportDialog = window->findChild<QObject*>(
+        QStringLiteral("targetSupportDialog"));
     QObject* tmsProjectTarget = window->findChild<QObject*>(
         QStringLiteral("tms9918aProjectTarget"));
     QObject* f18aProjectTarget = window->findChild<QObject*>(
@@ -2513,6 +2609,8 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     test.expect(projectSettingsOpened && projectDialog != nullptr
                     && waitFor([&] { return projectDialog->property("visible").toBool(); })
                     && window->findChild<QObject*>(QStringLiteral("projectNameField")) != nullptr
+                    && targetSupportButton != nullptr
+                    && targetSupportDialog != nullptr
                     && tmsProjectTarget != nullptr
                     && f18aProjectTarget != nullptr
                     && v9938ProjectTarget != nullptr

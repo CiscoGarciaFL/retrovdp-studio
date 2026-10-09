@@ -13,6 +13,7 @@ add_library(retrovdp_core STATIC
     ImageAdjustments.cpp
     ImageTransform.cpp
     Multicolor9918Converter.cpp
+    NintendoPpuConverter.cpp
     PaletteSelection.cpp
     RgbImage.cpp
     SegaGenesisVdpConverter.cpp
@@ -45,6 +46,7 @@ set(RETROVDP_HOT_QUANTIZER_SOURCES
     Multicolor9918Converter.cpp
     SegaSmsVdpConverter.cpp
     SegaGenesisVdpConverter.cpp
+    NintendoPpuConverter.cpp
 )
 if(MSVC)
     set_property(SOURCE ${RETROVDP_HOT_QUANTIZER_SOURCES} APPEND PROPERTY

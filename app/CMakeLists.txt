@@ -8,6 +8,7 @@ add_library(retrovdp_app_support STATIC
     ConversionRecipe.cpp
     ConversionRecipe.hpp
     EditorProjectController.cpp
+    EditorProjectControllerNintendo.cpp
     EditorProjectControllerSprite.cpp
     EditorProjectController.hpp
     ImageInputController.cpp
@@ -65,6 +66,11 @@ target_compile_definitions(RetroVDPStudio
     PRIVATE RETROVDP_VERSION="${RETROVDP_VERSION}"
 )
 
+file(GLOB_RECURSE TARGET_SUPPORT_THUMBNAILS
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/targets/*")
+
 qt_add_qml_module(RetroVDPStudio
     URI RetroVDPStudio
     VERSION 1.0
@@ -90,10 +96,13 @@ qt_add_qml_module(RetroVDPStudio
         qml/SpriteSetView.qml
         qml/ThemedFrame.qml
         qml/ThemedGroupBox.qml
+        qml/TargetSupportDialog.qml
     RESOURCES
         assets/icons/RetroVDPStudio-64.png
         assets/icons/RetroVDPStudio-256.png
         assets/icons/RetroVDPStudio-watermark-512.png
+        ../data/target-support/targets.json
+        ${TARGET_SUPPORT_THUMBNAILS}
 )
 
 if(WIN32)

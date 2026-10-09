@@ -436,6 +436,24 @@ std::vector<core::RgbColor> decodeTargetPalette(
         }
         return colors;
     }
+    if (target.profile == core::TargetProfileId::GameBoy) {
+        return {{224, 248, 208}, {136, 192, 112}, {52, 104, 86}, {8, 24, 32}};
+    }
+    if (target.profile == core::TargetProfileId::GameBoyColor
+        || target.profile == core::TargetProfileId::SuperNes) {
+        std::vector<core::RgbColor> colors;
+        colors.reserve(bytes.size() / 2U);
+        for (std::size_t offset = 0; offset + 1U < bytes.size(); offset += 2U) {
+            const std::uint16_t word = static_cast<std::uint16_t>(
+                bytes[offset] | (static_cast<std::uint16_t>(bytes[offset + 1U]) << 8U));
+            colors.push_back({
+                static_cast<std::uint8_t>((word & 0x1fU) * 255U / 31U),
+                static_cast<std::uint8_t>(((word >> 5U) & 0x1fU) * 255U / 31U),
+                static_cast<std::uint8_t>(((word >> 10U) & 0x1fU) * 255U / 31U),
+            });
+        }
+        return colors;
+    }
     if (target.profile == core::TargetProfileId::V9938
         || target.profile == core::TargetProfileId::V9958) {
         std::vector<core::RgbColor> colors;
@@ -3911,7 +3929,7 @@ bool ImageInputController::applyRecipeSettings(const QJsonObject& object, QStrin
     SettingsSnapshot value = snapshot();
     value.settings.mode = static_cast<core::ConversionMode>(
         std::clamp(object.value(QStringLiteral("mode")).toInt(conversionMode()), 0,
-                   static_cast<int>(core::ConversionMode::VicMulticolorCharacter)));
+                   static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
     const std::string requestedProfile = object.value(QStringLiteral("targetProfile"))
         .toString().toStdString();
     value.settings.targetProfile = requestedProfile.empty()
@@ -4053,7 +4071,7 @@ void ImageInputController::loadSettings()
     persisted.beginGroup(QStringLiteral("conversion"));
     settings_.mode = static_cast<core::ConversionMode>(
         std::clamp(persisted.value(QStringLiteral("mode"), 0).toInt(), 0,
-                   static_cast<int>(core::ConversionMode::VicMulticolorCharacter)));
+                   static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
     const std::string persistedProfile = persisted.value(
         QStringLiteral("targetProfile")).toString().toStdString();
     settings_.targetProfile = persistedProfile.empty()
@@ -4221,7 +4239,7 @@ void ImageInputController::saveSettings() const
 void ImageInputController::setTargetProfile(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::TargetProfileId::Vic));
+                       static_cast<int>(core::TargetProfileId::SuperNes));
     const auto requested = static_cast<core::TargetProfileId>(value);
     const auto& profile = core::targetProfile(requested);
     if (profile.status != core::TargetProfileStatus::Implemented
@@ -4239,7 +4257,7 @@ void ImageInputController::setTargetProfile(int value)
 void ImageInputController::setConversionMode(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::ConversionMode::VicMulticolorCharacter));
+                       static_cast<int>(core::ConversionMode::SuperNesMode3Background));
     const auto mode = static_cast<core::ConversionMode>(value);
     const auto effectiveProfile = core::effectiveTargetProfile(
         settings_.targetProfile, mode);

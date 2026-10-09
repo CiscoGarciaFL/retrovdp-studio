@@ -26,6 +26,8 @@ bool sameSpritePattern(const auto& left, const auto& right)
 
 int EditorProjectController::activeSpriteColorDepth() const
 {
+    if (usesGameBoyEditor() || usesGameBoyColorEditor()) return 2;
+    if (usesSuperNesEditor()) return 4;
     if (usesIndexed4BppEditor()) return 4;
     if (usesVicIIEditor()) return 2;
     if (spriteSets_.empty()) return 1;
@@ -41,11 +43,16 @@ int EditorProjectController::spritePatternsPerSet() const
         retrovdp::core::targetProfile(
             static_cast<retrovdp::core::TargetProfileId>(activeTarget()))
             .sprites.patternsPerSet,
-        80);
+        128);
 }
 
 int EditorProjectController::normalizedSpriteSize(int value) const
 {
+    if (usesSuperNesEditor()) {
+        int size = value >= 100 ? value / 100 : value;
+        size = size <= 12 ? 8 : (size <= 24 ? 16 : (size <= 48 ? 32 : 64));
+        return size * 100 + size;
+    }
     if (usesGenesisMode5Editor()) {
         int width = value >= 100 ? value / 100 : value;
         int height = value >= 100 ? value % 100 : value;
@@ -90,7 +97,7 @@ bool EditorProjectController::canPasteSpritePattern() const
     if (!data.has_value()
         || data->width != spritePatternWidth(activeSpriteSize_)
         || data->height != spritePatternHeight(activeSpriteSize_)) return false;
-    const int maximum = editScope_ == 1
+    const int maximum = (editScope_ == 1 || usesIndexedSpriteEditor())
         ? (1 << activeSpriteColorDepth()) - 1 : 1;
     const int count = data->width * data->height;
     for (int index = 0; index < count; ++index) {
@@ -175,12 +182,13 @@ void EditorProjectController::setSpriteDrawingColorIndex(int value)
     if (spriteSets_.empty()) return;
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
-    const int maximum = editScope_ == 1
-        ? (1 << activeSpriteColorDepth()) - 1 : 15;
+    const int maximum = usesIndexedSpriteEditor()
+        ? (1 << activeSpriteColorDepth()) - 1
+        : (editScope_ == 1 ? (1 << activeSpriteColorDepth()) - 1 : 15);
     value = std::clamp(value, 1, maximum);
     bool changed = spriteDrawingColorIndex_ != value;
     spriteDrawingColorIndex_ = value;
-    if (editScope_ == 0 && placement.color != value) {
+    if (editScope_ == 0 && !usesIndexedSpriteEditor() && placement.color != value) {
         placement.color = value;
         changed = true;
     }
@@ -198,7 +206,9 @@ void EditorProjectController::setActiveSpritePaletteBank(int value)
 {
     if (spriteSets_.empty()) return;
     value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
-                              : (usesHuC6270Editor() ? 15 : 0));
+                              : (usesHuC6270Editor() ? 15
+                              : (usesGameBoyEditor() ? 1
+                              : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 7 : 0))));
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.palette == value) return;
@@ -216,7 +226,9 @@ bool EditorProjectController::activeSpritePriority() const
 
 void EditorProjectController::setActiveSpritePriority(bool value)
 {
-    if (!usesGenesisMode5Editor() || spriteSets_.empty()) return;
+    if ((!usesGenesisMode5Editor() && !usesGameBoyEditor()
+         && !usesGameBoyColorEditor() && !usesSuperNesEditor())
+        || spriteSets_.empty()) return;
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.priority == value) return;
@@ -228,7 +240,8 @@ void EditorProjectController::setActiveSpritePriority(bool value)
 void EditorProjectController::setActiveSpriteColorDepth(int value)
 {
     if (editScope_ != 1 || spriteSets_.empty()) return;
-    value = usesIndexed4BppEditor() ? 4 : std::clamp(value, 1, 3);
+    value = usesGameBoyEditor() || usesGameBoyColorEditor() ? 2
+        : usesIndexed4BppEditor() ? 4 : std::clamp(value, 1, 3);
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.colorDepth == value) return;
@@ -245,7 +258,7 @@ void EditorProjectController::syncSpriteDrawingColor()
     }
     const auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                                 .placements[static_cast<std::size_t>(activeSprite_)];
-    if (editScope_ == 0) {
+    if (editScope_ == 0 && !usesIndexedSpriteEditor()) {
         spriteDrawingColorIndex_ = placement.color;
         return;
     }
@@ -356,7 +369,7 @@ void EditorProjectController::setSpritePanActive(bool value)
     spritePanSetIndex_ = activeSpriteSet_;
     spritePanSpriteIndex_ = activeSprite_;
     spritePanSize_ = activeSpriteSize_;
-    spritePanEnhanced_ = editScope_ == 1;
+    spritePanEnhanced_ = editScope_ == 1 || usesIndexedSpriteEditor();
     spritePanOriginal_ = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     spritePanX_ = 0;
     spritePanY_ = 0;
@@ -417,7 +430,7 @@ void EditorProjectController::paintSpritePixel(int setIndex,
     auto& pattern = spritePattern(setIndex, spriteIndex, size);
     std::vector<std::uint8_t>* pixels = &pattern.baselinePixels;
     int value = foreground ? 1 : 0;
-    if (editScope_ == 1) {
+    if (editScope_ == 1 || usesIndexedSpriteEditor()) {
         ensureF18aSpriteOverride(pattern);
         pixels = &pattern.f18aPixels;
         value = foreground ? spriteDrawingColorIndex_ : 0;
@@ -526,8 +539,9 @@ void EditorProjectController::rotateActiveSpritePattern()
     endSpriteEdit();
     auto& pattern = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     const SpritePattern before = pattern;
-    if (editScope_ == 1) ensureF18aSpriteOverride(pattern);
-    auto& pixels = editScope_ == 1 ? pattern.f18aPixels : pattern.baselinePixels;
+    const bool indexed = editScope_ == 1 || usesIndexedSpriteEditor();
+    if (indexed) ensureF18aSpriteOverride(pattern);
+    auto& pixels = indexed ? pattern.f18aPixels : pattern.baselinePixels;
     const auto source = pixels;
     const int size = activeSpriteSize_;
     const int width = spritePatternWidth(size);
@@ -550,8 +564,9 @@ void EditorProjectController::mirrorActiveSpritePattern()
     endSpriteEdit();
     auto& pattern = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     const SpritePattern before = pattern;
-    if (editScope_ == 1) ensureF18aSpriteOverride(pattern);
-    auto& pixels = editScope_ == 1 ? pattern.f18aPixels : pattern.baselinePixels;
+    const bool indexed = editScope_ == 1 || usesIndexedSpriteEditor();
+    if (indexed) ensureF18aSpriteOverride(pattern);
+    auto& pixels = indexed ? pattern.f18aPixels : pattern.baselinePixels;
     const int size = activeSpriteSize_;
     const int width = spritePatternWidth(size);
     const int height = spritePatternHeight(size);
@@ -573,8 +588,9 @@ void EditorProjectController::flipActiveSpritePattern()
     endSpriteEdit();
     auto& pattern = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     const SpritePattern before = pattern;
-    if (editScope_ == 1) ensureF18aSpriteOverride(pattern);
-    auto& pixels = editScope_ == 1 ? pattern.f18aPixels : pattern.baselinePixels;
+    const bool indexed = editScope_ == 1 || usesIndexedSpriteEditor();
+    if (indexed) ensureF18aSpriteOverride(pattern);
+    auto& pixels = indexed ? pattern.f18aPixels : pattern.baselinePixels;
     const int size = activeSpriteSize_;
     const int width = spritePatternWidth(size);
     const int height = spritePatternHeight(size);
@@ -596,8 +612,9 @@ void EditorProjectController::blankActiveSpritePattern()
     endSpriteEdit();
     auto& pattern = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     const SpritePattern before = pattern;
-    if (editScope_ == 1) ensureF18aSpriteOverride(pattern);
-    auto& pixels = editScope_ == 1 ? pattern.f18aPixels : pattern.baselinePixels;
+    const bool indexed = editScope_ == 1 || usesIndexedSpriteEditor();
+    if (indexed) ensureF18aSpriteOverride(pattern);
+    auto& pixels = indexed ? pattern.f18aPixels : pattern.baselinePixels;
     const int count = spritePatternWidth(activeSpriteSize_)
         * spritePatternHeight(activeSpriteSize_);
     std::fill_n(pixels.begin(), count, 0);
@@ -714,7 +731,7 @@ bool EditorProjectController::pasteActiveSpritePattern()
         setStatus({}, QStringLiteral("Clipboard sprite size does not match the active editor."));
         return false;
     }
-    const int maximum = editScope_ == 1
+    const int maximum = (editScope_ == 1 || usesIndexedSpriteEditor())
         ? (1 << activeSpriteColorDepth()) - 1 : 1;
     const int count = data->width * data->height;
     for (int index = 0; index < count; ++index) {
@@ -722,7 +739,7 @@ bool EditorProjectController::pasteActiveSpritePattern()
             const QString targetName = activeTargetInfo()
                                            .value(QStringLiteral("name"))
                                            .toString();
-            setStatus({}, editScope_ == 0
+            setStatus({}, !usesIndexedSpriteEditor() && editScope_ == 0
                 ? QStringLiteral("Enhanced-color sprite pixels are not supported by %1.")
                       .arg(targetName)
                 : QStringLiteral("Clipboard pixel indexes exceed the active %1 color depth.")
@@ -732,7 +749,7 @@ bool EditorProjectController::pasteActiveSpritePattern()
     }
     auto& pattern = spritePattern(activeSpriteSet_, activeSprite_, activeSpriteSize_);
     const SpritePattern before = pattern;
-    if (editScope_ == 1) {
+    if (editScope_ == 1 || usesIndexedSpriteEditor()) {
         ensureF18aSpriteOverride(pattern);
         pattern.f18aPixels = data->pixels;
     } else {
@@ -772,7 +789,7 @@ EditorProjectController::spritePattern(int setIndex, int spriteIndex, int size) 
 const std::vector<std::uint8_t>&
 EditorProjectController::visibleSpritePixels(const SpritePattern& pattern) const
 {
-    return editScope_ == 1 && pattern.f18aOverride
+    return (editScope_ == 1 || usesIndexedSpriteEditor()) && pattern.f18aOverride
         ? pattern.f18aPixels : pattern.baselinePixels;
 }
 

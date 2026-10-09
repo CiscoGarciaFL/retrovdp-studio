@@ -45,7 +45,8 @@ summary.
 ## Targets, modes, presets, and formats
 
 The implemented target names are `tms9918a`, `f18a`, `v9938`, `v9958`,
-`sega-sms-vdp`, `sega-genesis-vdp`, `huc6270`, `vic-ii`, and `vic`. The default target is `tms9918a`; the default mode is
+`sega-sms-vdp`, `sega-genesis-vdp`, `huc6270`, `vic-ii`, `vic`,
+`game-boy-ppu`, `game-boy-color-ppu`, and `super-nes-ppu`. The default target is `tms9918a`; the default mode is
 `bitmap-9918a`, the default preset is `balanced`, and the default format is
 `tifiles`. A target accepts only modes declared compatible by its profile.
 
@@ -82,6 +83,11 @@ Supported modes are:
 - `vic-ii-multicolor-bitmap`
 - `vic-hires-character`
 - `vic-multicolor-character`
+- `game-boy-background`
+- `game-boy-color-background`
+- `super-nes-mode-0-background`
+- `super-nes-mode-1-background`
+- `super-nes-mode-3-background`
 
 Master System Mode 4 supports `raw` and `png` export. A RAW manifest contains
 `.TILES` planar pattern data, a `.MAP` name table, `.PAL` RGB222 CRAM bytes,
@@ -95,6 +101,12 @@ HuC6270 RAW output contains `.TILES` 4-plane pattern data, a little-endian
 `.BAT`, a complete `.PAL` VCE color table, and `.REG` VDC/VCE state. VIC and
 VIC-II RAW output uses `.CHR` or `.BITMAP`, `.SCR`, optional `.COL`, and `.REG`
 sidecars according to the selected native mode.
+
+Nintendo PPU RAW output contains `.TILES`, `.MAP`, optional Game Boy Color
+`.ATTR`, `.PAL` or Super NES `.CGRAM`, and `.REG` sidecars. The desktop
+Character/Sprite workspace additionally exports `.CHR`, `.SPR`, and `.OAM`
+assets; that authored-project export is intentionally not a headless Screen
+Image CLI operation.
 
 Supported presets are `balanced`, `crisp-pixel-art`, `smooth-photograph`, and
 `ordered-retro`. The shorter aliases `crisp`, `smooth`, and `ordered` are also

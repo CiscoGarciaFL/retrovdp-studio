@@ -118,6 +118,15 @@ bool isCommodoreMode(ConversionMode mode)
         || mode == ConversionMode::VicMulticolorCharacter;
 }
 
+bool isNintendoPpuMode(ConversionMode mode)
+{
+    return mode == ConversionMode::GameBoyBackground
+        || mode == ConversionMode::GameBoyColorBackground
+        || mode == ConversionMode::SuperNesMode0Background
+        || mode == ConversionMode::SuperNesMode1Background
+        || mode == ConversionMode::SuperNesMode3Background;
+}
+
 const TargetMemoryTable* table(const TargetMemoryImage& image, TargetTableRole role)
 {
     const auto found = std::ranges::find(image.tables, role, &TargetMemoryTable::role);
@@ -159,6 +168,8 @@ char tableSuffix(TargetTableRole role, ConversionMode mode)
     case TargetTableRole::ScanlinePalettes: return 'M';
     case TargetTableRole::Framebuffer: return 'V';
     case TargetTableRole::TileMap: return 'N';
+    case TargetTableRole::AttributeMap: return 'A';
+    case TargetTableRole::ObjectAttributes: return 'O';
     case TargetTableRole::DisplayRegisters: return 'R';
     }
     return 'M';
@@ -288,6 +299,24 @@ GeneratedFileManifest tableFiles(const ExportRequest& request)
                 fileName = upperBase + ".SCR";
             else if (source.role == TargetTableRole::Color)
                 fileName = upperBase + ".COL";
+            else if (source.role == TargetTableRole::DisplayRegisters)
+                fileName = upperBase + ".REG";
+        } else if (request.format == ExportFormat::Raw
+                   && isNintendoPpuMode(request.target->mode)) {
+            if (source.role == TargetTableRole::Pattern)
+                fileName = upperBase + ".TILES";
+            else if (source.role == TargetTableRole::TileMap)
+                fileName = upperBase + ".MAP";
+            else if (source.role == TargetTableRole::AttributeMap)
+                fileName = upperBase + ".ATTR";
+            else if (source.role == TargetTableRole::ObjectAttributes)
+                fileName = upperBase + ".OAM";
+            else if (source.role == TargetTableRole::Palette)
+                fileName = upperBase
+                    + (request.target->mode == ConversionMode::SuperNesMode0Background
+                       || request.target->mode == ConversionMode::SuperNesMode1Background
+                       || request.target->mode == ConversionMode::SuperNesMode3Background
+                           ? ".CGRAM" : ".PAL");
             else if (source.role == TargetTableRole::DisplayRegisters)
                 fileName = upperBase + ".REG";
         }

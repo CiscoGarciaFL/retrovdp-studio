@@ -75,6 +75,22 @@ Legacy TMS-family Screen Image conversion modes remain selectable for
 compatibility. They do not change the Character or Sprite workspaces away from
 their native Mode 4 interpretation when the Master System target is active.
 
+## Nintendo PPU dispositions
+
+The `game-boy-ppu`, `game-boy-color-ppu`, and `super-nes-ppu` profiles have
+explicit native interpretations in all three workspaces:
+
+| Target | Screen Image | Character | Sprite |
+| --- | --- | --- | --- |
+| Game Boy | Native 160×144 background, 2bpp tiles, map, palette/register state | Native 384-tile storage and 32×32 map; export selects and validates one LCD signed/unsigned 256-tile addressing window | Native 40-entry OAM, global 8×8/8×16 size, 2bpp patterns, two OBJ palette assignments |
+| Game Boy Color | Native 160×144 background, two VRAM banks, map attributes, RGB555 palettes | Native 768-tile two-bank storage, eight BG palettes, bank/palette/flip/priority attributes; one validated LCD addressing window | Native 40-entry OAM, global 8×8/8×16 size, 2bpp patterns, eight RGB555 OBJ palettes |
+| Super NES | Native BG1 slices for Modes 0, 1, and 3 with 2/4/8bpp tiles, 16-bit map, CGRAM, and PPU state | Native 1,024-tile authoring storage and 32×32 map with mode-selected color depth; the fixed Mode 3 export layout reserves 8 KiB and addresses 896 tiles; Mode 3 uses the full 256-color palette rather than palette-bank selection | Native 128-entry OAM, 4bpp patterns, eight OBJ palettes, flip/priority, and one validated hardware small/large size pair |
+
+Screen Image intentionally produces one opaque background layer. It does not
+infer Game Boy window composition or additional Super NES layers, color math,
+windows, HDMA, or raster-time changes from a flat source image. The complete
+byte and export contract is in [NINTENDO_PPU_TARGETS.md](NINTENDO_PPU_TARGETS.md).
+
 ## Master System behavior that must not be approximated as TMS9918A
 
 - Background tiles are four bitplanes, not a one-bit bitmap plus one color byte

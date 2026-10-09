@@ -17,6 +17,8 @@ completed phase checklist from competing with the current architecture plan.
 | [TARGET_IMPLEMENTATION_GUIDE.md](TARGET_IMPLEMENTATION_GUIDE.md) | Required Screen Image, Character, and Sprite accounting for every target, including approximation and disablement rules |
 | [VDP_SUPPORT_ROADMAP.md](VDP_SUPPORT_ROADMAP.md) | Hardware catalog, target families, implementation status, and per-target acceptance policy |
 | [NEC_COMMODORE_TARGETS.md](NEC_COMMODORE_TARGETS.md) | Implemented HuC6270, VIC-II, and VIC mode, memory, export, and reference contract |
+| [NINTENDO_PPU_TARGETS.md](NINTENDO_PPU_TARGETS.md) | Implemented Game Boy, Game Boy Color, and Super NES Screen Image, Character, Sprite, memory, and export contract |
+| [../data/target-support/README.md](../data/target-support/README.md) | Standardized target-support summaries and credited real-product thumbnail sources used by the Project target-support popup |
 | [VDP_DESIGN_TOOLS.md](VDP_DESIGN_TOOLS.md) | Character, pattern, sprite/object, allocation, and hardware-editor behavior |
 | [BATCH_MODE.md](BATCH_MODE.md) | Active synchronized media-sequence contract for video, audio, mappings, extraction, playback, and batch conversion |
 | [CLIP_MAPS.md](CLIP_MAPS.md) | Implemented clip-map schema, CSV/TSV and Daphne/Hypseus adapters, CLI, and engine loaders |

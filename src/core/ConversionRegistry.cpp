@@ -5,6 +5,7 @@
 #include "retrovdp/core/F18AConverter.hpp"
 #include "retrovdp/core/HuC6270Converter.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
+#include "retrovdp/core/NintendoPpuConverter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/SegaSmsVdpConverter.hpp"
 #include "retrovdp/core/SegaGenesisVdpConverter.hpp"
@@ -43,6 +44,13 @@ ConversionResult compileRegisteredConversion(const RgbImage& source,
 
     ConversionResult result;
     switch (settings.mode) {
+    case ConversionMode::GameBoyBackground:
+    case ConversionMode::GameBoyColorBackground:
+    case ConversionMode::SuperNesMode0Background:
+    case ConversionMode::SuperNesMode1Background:
+    case ConversionMode::SuperNesMode3Background:
+        result = convertNintendoPpu(source, settings, cancellation, std::move(progress));
+        break;
     case ConversionMode::HuC6270Background256:
     case ConversionMode::HuC6270Background320:
         result = convertHuC6270Background(

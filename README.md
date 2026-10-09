@@ -25,8 +25,9 @@ The application is organized around three independent ideas:
 ## Status
 
 The current release implements TMS9918A, F18A, V9938, V9958, Sega Master
-System, Sega Genesis/Mega Drive, NEC/Hudson HuC6270, MOS VIC-II, and MOS VIC
-conversion profiles. V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
+System, Sega Genesis/Mega Drive, NEC/Hudson HuC6270, MOS VIC-II, MOS VIC,
+Nintendo Game Boy, Nintendo Game Boy Color, and Super NES conversion profiles.
+V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
 compiled through the registered Yamaha bitmap strategies, including
 programmable palette and YJK/YAE output. The Master System profile compiles
 192-, 224-, and PAL 240-line Mode 4 screens into 4-bit planar tiles, name-table

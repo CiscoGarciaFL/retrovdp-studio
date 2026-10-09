@@ -62,7 +62,8 @@ Rectangle {
     function pixelColor(value) {
         if (value === 0)
             return "#20272e"
-        if (editorProject.editScope === 0)
+        if (editorProject.editScope === 0
+                && editorProject.activeTargetInfo.spriteMaximumColorDepth <= 1)
             return paletteColors[spriteColorIndex]
         return paletteColors[Math.min(paletteColors.length - 1, value)]
     }

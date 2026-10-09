@@ -278,8 +278,13 @@ ApplicationWindow {
         applicationWindow: window
     }
 
+    TargetSupportDialog {
+        id: targetSupportDialog
+    }
+
     ProjectDialog {
         id: projectDialog
+        supportDialog: targetSupportDialog
     }
 
     FileDialog {
@@ -303,8 +308,15 @@ ApplicationWindow {
     FolderDialog {
         id: genesisCharacterExportDialog
         objectName: "genesisCharacterExportDialog"
-        title: qsTr("Export native Genesis character assets")
-        onAccepted: editorProject.exportGenesisCharacterAssets(selectedFolder)
+        title: editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+               ? qsTr("Export native Genesis character assets")
+               : qsTr("Export native Nintendo PPU assets")
+        onAccepted: {
+            if (editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+                editorProject.exportGenesisCharacterAssets(selectedFolder)
+            else
+                editorProject.exportNintendoEditorAssets(selectedFolder)
+        }
     }
     Action {
         id: reloadAction
@@ -322,8 +334,12 @@ ApplicationWindow {
         enabled: (window.workspaceMode === 0 && imageInput.hasConversion)
                  || (window.workspaceMode === 1
                      && editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+                 || ((window.workspaceMode === 1 || window.workspaceMode === 2)
+                     && (editorProject.activeTargetInfo.id === "game-boy-ppu"
+                         || editorProject.activeTargetInfo.id === "game-boy-color-ppu"
+                         || editorProject.activeTargetInfo.id === "super-nes-ppu"))
         onTriggered: {
-            if (window.workspaceMode === 1)
+            if (window.workspaceMode === 1 || window.workspaceMode === 2)
                 genesisCharacterExportDialog.open()
             else
                 exportDialog.open()

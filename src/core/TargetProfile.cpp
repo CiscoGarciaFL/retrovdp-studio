@@ -83,6 +83,14 @@ constexpr std::array vicModes{
     ConversionMode::VicMulticolorCharacter,
 };
 
+constexpr std::array gameBoyModes{ConversionMode::GameBoyBackground};
+constexpr std::array gameBoyColorModes{ConversionMode::GameBoyColorBackground};
+constexpr std::array superNesModes{
+    ConversionMode::SuperNesMode0Background,
+    ConversionMode::SuperNesMode1Background,
+    ConversionMode::SuperNesMode3Background,
+};
+
 constexpr TargetCapability commonCapabilities =
     TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
     | TargetCapability::Sprites | TargetCapability::TileMaps
@@ -282,6 +290,40 @@ const std::array modes{
                           {88, 184, {23, 8}},
                           {PaletteModel::FixedRevisionDependent, 16, 16, 0},
                           ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::GameBoyBackground,
+                          mustId<ModeId>("game-boy-background"),
+                          "Game Boy Background (160x144)",
+                          TargetProfileId::GameBoy,
+                          {160, 144, {1, 1}},
+                          {PaletteModel::Fixed, 4, 4, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::GameBoyColorBackground,
+                          mustId<ModeId>("game-boy-color-background"),
+                          "Game Boy Color Background (160x144)",
+                          TargetProfileId::GameBoyColor,
+                          {160, 144, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 64, 32, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::SuperNesMode0Background,
+                          mustId<ModeId>("super-nes-mode-0-background"),
+                          "Super NES Mode 0 BG1 (256x224, 2bpp)",
+                          TargetProfileId::SuperNes,
+                          {256, 224, {8, 7}},
+                          {PaletteModel::ProgrammableRgb, 256, 32, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::SuperNesMode1Background,
+                          mustId<ModeId>("super-nes-mode-1-background"),
+                          "Super NES Mode 1 BG1 (256x224, 4bpp)",
+                          TargetProfileId::SuperNes,
+                          {256, 224, {8, 7}},
+                          {PaletteModel::ProgrammableRgb, 256, 128, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::SuperNesMode3Background,
+                          mustId<ModeId>("super-nes-mode-3-background"),
+                          "Super NES Mode 3 BG1 (256x224, 8bpp)",
+                          TargetProfileId::SuperNes,
+                          {256, 224, {8, 7}},
+                          {PaletteModel::ProgrammableRgb, 256, 256, 5},
+                          ModeOption::PaletteSelection},
 };
 
 const std::array profiles{
@@ -378,6 +420,42 @@ const std::array profiles{
                       | TargetCapability::EnhancedColor,
                   {8, 8, 256, 1, 22, 23},
                   {}, vicModes},
+    TargetProfile{TargetProfileId::GameBoy,
+                  mustId<TargetId>("game-boy-ppu"),
+                  "Nintendo Game Boy PPU",
+                  TargetKind::PictureProcessor, TargetProfileStatus::Implemented,
+                  8U * 1024U,
+                  TargetCapability::FixedPalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::HorizontalScroll,
+                  {8, 8, 384, 1, 32, 32},
+                  {8, 16, 40, 40, 2, true, false}, gameBoyModes},
+    TargetProfile{TargetProfileId::GameBoyColor,
+                  mustId<TargetId>("game-boy-color-ppu"),
+                  "Nintendo Game Boy Color PPU",
+                  TargetKind::PictureProcessor, TargetProfileStatus::Implemented,
+                  16U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor
+                      | TargetCapability::HorizontalScroll,
+                  {8, 8, 768, 1, 32, 32},
+                  {8, 16, 40, 40, 2, true, false}, gameBoyColorModes},
+    TargetProfile{TargetProfileId::SuperNes,
+                  mustId<TargetId>("super-nes-ppu"),
+                  "Super NES 5C77 / 5C78 PPU",
+                  TargetKind::PictureProcessor, TargetProfileStatus::Implemented,
+                  64U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor
+                      | TargetCapability::MultipleTileLayers
+                      | TargetCapability::HorizontalScroll,
+                  {8, 8, 1024, 1, 32, 32},
+                  {8, 64, 128, 128, 4, false, true}, superNesModes},
 };
 
 } // namespace
@@ -552,6 +630,12 @@ ConversionMode defaultConversionMode(TargetProfileId profile)
         return ConversionMode::VicIIHiresCharacter;
     if (profile == TargetProfileId::Vic)
         return ConversionMode::VicHiresCharacter;
+    if (profile == TargetProfileId::GameBoy)
+        return ConversionMode::GameBoyBackground;
+    if (profile == TargetProfileId::GameBoyColor)
+        return ConversionMode::GameBoyColorBackground;
+    if (profile == TargetProfileId::SuperNes)
+        return ConversionMode::SuperNesMode1Background;
     return supported.front();
 }
 

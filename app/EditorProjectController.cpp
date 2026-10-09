@@ -55,6 +55,9 @@ QString previewName(int target)
     case 6: return QStringLiteral("huc6270");
     case 7: return QStringLiteral("vic-ii");
     case 8: return QStringLiteral("vic");
+    case 9: return QStringLiteral("game-boy-ppu");
+    case 10: return QStringLiteral("game-boy-color-ppu");
+    case 11: return QStringLiteral("super-nes-ppu");
     default: return QStringLiteral("tms9918a");
     }
 }
@@ -145,6 +148,9 @@ QVariantList EditorProjectController::supportedTargets() const
     if (huc6270Enabled_) append(retrovdp::core::TargetProfileId::HuC6270);
     if (vicIiEnabled_) append(retrovdp::core::TargetProfileId::VicII);
     if (vicEnabled_) append(retrovdp::core::TargetProfileId::Vic);
+    if (gameBoyEnabled_) append(retrovdp::core::TargetProfileId::GameBoy);
+    if (gameBoyColorEnabled_) append(retrovdp::core::TargetProfileId::GameBoyColor);
+    if (superNesEnabled_) append(retrovdp::core::TargetProfileId::SuperNes);
     return result;
 }
 
@@ -180,6 +186,8 @@ QVariantMap EditorProjectController::activeTargetInfo() const
             }
         } else if (usesVicIIEditor()) {
             spriteSizes.push_back(2421);
+        } else if (usesSuperNesEditor()) {
+            for (const int size : {8, 16, 32, 64}) spriteSizes.push_back(size);
         } else {
             spriteSizes.push_back(static_cast<int>(profile.sprites.minimumPixelSize));
             if (profile.sprites.maximumPixelSize != profile.sprites.minimumPixelSize)
@@ -213,17 +221,23 @@ QVariantMap EditorProjectController::activeTargetInfo() const
          characterMapColumns()},
         {QStringLiteral("characterMapRows"),
          characterMapRows()},
-        {QStringLiteral("characterColorDepth"), usesIndexed4BppEditor() ? 4 : 1},
+        {QStringLiteral("characterColorDepth"),
+         activeCharacterColorDepth()},
         {QStringLiteral("characterInterpretation"),
          usesSmsMode4Editor() ? QStringLiteral("Mode 4 planar tiles")
          : usesGenesisMode5Editor() ? QStringLiteral("Mode V packed 4bpp tiles")
          : usesHuC6270Editor() ? QStringLiteral("HuC6270 4-plane background tiles")
          : usesVicIIEditor() ? QStringLiteral("VIC-II high-resolution and multicolor characters")
+         : usesGameBoyEditor() ? QStringLiteral("Game Boy 2-plane tiles")
+         : usesGameBoyColorEditor() ? QStringLiteral("Game Boy Color banked 2-plane tiles")
+         : usesSuperNesEditor() ? QStringLiteral("Super NES mode-selected planar tiles")
          : activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::Vic)
              ? QStringLiteral("VIC high-resolution and multicolor characters")
              : QStringLiteral("Target-compatible patterns")},
         {QStringLiteral("characterPaletteBankCount"),
-         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16 : 1)},
+         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16
+         : (usesGameBoyColorEditor() ? 8
+         : (usesSuperNesEditor() && activeCharacterColorDepth() < 8 ? 8 : 1)))},
         {QStringLiteral("sprites"),
          has(retrovdp::core::TargetCapability::Sprites)},
         {QStringLiteral("spriteSizes"), spriteSizes},
@@ -248,15 +262,26 @@ QVariantMap EditorProjectController::activeTargetInfo() const
                  ? QStringLiteral("HuC6270 sprites; 16/32 width by 16/32/64 height, 4bpp palette")
              : usesVicIIEditor()
                  ? QStringLiteral("VIC-II 24x21 sprites; high-resolution or multicolor")
+             : usesGameBoyEditor()
+                 ? QStringLiteral("Game Boy OAM; global 8x8 or 8x16, 2bpp OBJ palettes")
+             : usesGameBoyColorEditor()
+                 ? QStringLiteral("Game Boy Color OAM; global 8x8 or 8x16, color OBJ palettes")
+             : usesSuperNesEditor()
+                 ? QStringLiteral("Super NES OAM; selected small/large size pair, 4bpp OBJ palettes")
              : QStringLiteral("Target-compatible sprites")},
         {QStringLiteral("spriteMaximumPerScanline"),
          usesSmsMode4Editor() ? 8 : (usesGenesisMode5Editor()
              ? (imageInput_->targetWidth() == 320 ? 20 : 16)
-             : (usesHuC6270Editor() ? 16 : (usesVicIIEditor() ? 8 : 0)))},
+             : (usesHuC6270Editor() ? 16 : (usesVicIIEditor() ? 8
+             : (usesGameBoyEditor() || usesGameBoyColorEditor() ? 10
+             : (usesSuperNesEditor() ? 32 : 0)))))},
         {QStringLiteral("spriteSupportsFlipAttributes"),
-         usesGenesisMode5Editor() || usesHuC6270Editor()},
+         usesGenesisMode5Editor() || usesHuC6270Editor()
+             || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor()},
         {QStringLiteral("spritePaletteBankCount"),
-         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16 : 1)},
+         usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16
+         : (usesGameBoyEditor() ? 2
+         : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 8 : 1)))},
     };
 }
 
@@ -293,7 +318,8 @@ bool EditorProjectController::targetEnabled(int value) const
         || (value == 2 && v9938Enabled_) || (value == 3 && v9958Enabled_)
         || (value == 4 && segaSmsEnabled_) || (value == 5 && segaGenesisEnabled_)
         || (value == 6 && huc6270Enabled_) || (value == 7 && vicIiEnabled_)
-        || (value == 8 && vicEnabled_);
+        || (value == 8 && vicEnabled_) || (value == 9 && gameBoyEnabled_)
+        || (value == 10 && gameBoyColorEnabled_) || (value == 11 && superNesEnabled_);
 }
 
 void EditorProjectController::setProjectName(const QString& value)
@@ -348,14 +374,51 @@ bool EditorProjectController::usesVicIIEditor() const
         == static_cast<int>(retrovdp::core::TargetProfileId::VicII);
 }
 
+bool EditorProjectController::usesGameBoyEditor() const
+{
+    return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::GameBoy);
+}
+
+bool EditorProjectController::usesGameBoyColorEditor() const
+{
+    return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::GameBoyColor);
+}
+
+bool EditorProjectController::usesSuperNesEditor() const
+{
+    return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::SuperNes);
+}
+
 bool EditorProjectController::usesCompoundSpriteEditor() const
 {
-    return usesGenesisMode5Editor() || usesHuC6270Editor() || usesVicIIEditor();
+    return usesGenesisMode5Editor() || usesHuC6270Editor() || usesVicIIEditor()
+        || usesSuperNesEditor();
 }
 
 bool EditorProjectController::usesIndexed4BppEditor() const
 {
-    return usesSmsMode4Editor() || usesGenesisMode5Editor() || usesHuC6270Editor();
+    return usesSmsMode4Editor() || usesGenesisMode5Editor() || usesHuC6270Editor()
+        || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor();
+}
+
+bool EditorProjectController::usesIndexedSpriteEditor() const
+{
+    return usesIndexed4BppEditor();
+}
+
+int EditorProjectController::activeCharacterColorDepth() const
+{
+    if (usesGameBoyEditor() || usesGameBoyColorEditor()) return 2;
+    if (usesSuperNesEditor()) {
+        if (imageInput_->conversionMode()
+            == static_cast<int>(retrovdp::core::ConversionMode::SuperNesMode0Background))
+            return 2;
+        if (imageInput_->conversionMode()
+            == static_cast<int>(retrovdp::core::ConversionMode::SuperNesMode3Background))
+            return 8;
+        return 4;
+    }
+    return usesIndexed4BppEditor() ? 4 : 1;
 }
 
 bool EditorProjectController::usesPerSpriteSizeEditor() const
@@ -368,6 +431,30 @@ bool EditorProjectController::usesPerSpriteSizeEditor() const
 
 QVariantList EditorProjectController::characterPaletteColors() const
 {
+    if (usesGameBoyEditor()) {
+        return {QColor(224, 248, 208), QColor(136, 192, 112),
+                QColor(52, 104, 86), QColor(8, 24, 32)};
+    }
+    if (usesGameBoyColorEditor() || usesSuperNesEditor()) {
+        const QVariantList palette = imageInput_->paletteColors();
+        const int colorsPerBank = usesSuperNesEditor()
+            && imageInput_->conversionMode()
+                == static_cast<int>(retrovdp::core::ConversionMode::SuperNesMode3Background)
+            ? 256 : (usesSuperNesEditor()
+                && imageInput_->conversionMode()
+                    == static_cast<int>(retrovdp::core::ConversionMode::SuperNesMode1Background)
+                ? 16 : 4);
+        const int start = characterPaletteBank_ * colorsPerBank;
+        if (palette.size() >= start + colorsPerBank)
+            return palette.mid(start, colorsPerBank);
+        QVariantList fallback;
+        fallback.reserve(colorsPerBank);
+        for (int index = 0; index < colorsPerBank; ++index) {
+            const int level = colorsPerBank == 1 ? 0 : index * 255 / (colorsPerBank - 1);
+            fallback.push_back(QColor(level, level, level));
+        }
+        return fallback;
+    }
     if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = characterPaletteBank_ * 16;
@@ -444,6 +531,27 @@ QVariantList EditorProjectController::characterPaletteColors() const
 
 QVariantList EditorProjectController::spritePaletteColors() const
 {
+    if (usesGameBoyEditor()) return characterPaletteColors();
+    if (usesGameBoyColorEditor()) {
+        const QVariantList palette = imageInput_->paletteColors();
+        const int start = 32 + activeSpritePaletteBank() * 4;
+        if (palette.size() >= start + 4) return palette.mid(start, 4);
+        return {QColor(0, 0, 0, 0), QColor(85, 85, 85),
+                QColor(170, 170, 170), QColor(255, 255, 255)};
+    }
+    if (usesSuperNesEditor()) {
+        const QVariantList palette = imageInput_->paletteColors();
+        const int start = 128 + activeSpritePaletteBank() * 16;
+        if (palette.size() >= start + 16) return palette.mid(start, 16);
+        QVariantList fallback;
+        fallback.reserve(16);
+        fallback.push_back(QColor(0, 0, 0, 0));
+        for (int index = 1; index < 16; ++index) {
+            const int level = index * 255 / 15;
+            fallback.push_back(QColor(level, level, level));
+        }
+        return fallback;
+    }
     if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = activeSpritePaletteBank() * 16;
@@ -479,7 +587,10 @@ void EditorProjectController::ensureIndexedCharacterOverride(
 void EditorProjectController::setCharacterPaletteBank(int value)
 {
     value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
-                              : (usesHuC6270Editor() ? 15 : 0));
+                              : (usesHuC6270Editor() ? 15
+                              : (usesGameBoyColorEditor()
+                              || (usesSuperNesEditor() && activeCharacterColorDepth() < 8)
+                                  ? 7 : 0)));
     if (characterPaletteBank_ == value) return;
     characterPaletteBank_ = value;
     ++characterRevision_;
@@ -703,17 +814,20 @@ QVariantList EditorProjectController::activeSpritePlacements() const
                                      {QStringLiteral("storedSize"), placement.size},
                                      {QStringLiteral("color"), placement.color},
                                      {QStringLiteral("colorDepth"),
-                                      usesIndexed4BppEditor() ? 4
-                                      : (editScope_ == 1 ? placement.colorDepth : 1)},
+                                      activeSpriteColorDepth()},
                                      {QStringLiteral("palette"), placement.palette},
                                      {QStringLiteral("flipX"),
-                                      editScope_ == 1 && !usesSmsMode4Editor()
+                                      (editScope_ == 1 || usesIndexedSpriteEditor())
+                                          && !usesSmsMode4Editor()
                                           && placement.flipX},
                                      {QStringLiteral("flipY"),
-                                      editScope_ == 1 && !usesSmsMode4Editor()
+                                      (editScope_ == 1 || usesIndexedSpriteEditor())
+                                          && !usesSmsMode4Editor()
                                           && placement.flipY},
                                      {QStringLiteral("priority"),
-                                      usesGenesisMode5Editor() && placement.priority},
+                                      (usesGenesisMode5Editor() || usesGameBoyEditor()
+                                       || usesGameBoyColorEditor() || usesSuperNesEditor())
+                                          && placement.priority},
                                      {QStringLiteral("profile"),
                                       usesSmsMode4Editor()
                                           ? QStringLiteral("sms-mode4")
@@ -752,8 +866,7 @@ QVariantList EditorProjectController::spriteEditorSlots() const
                                             ? placement.size : spriteGlobalSize_));
             values.insert(QStringLiteral("color"), placement.color);
             values.insert(QStringLiteral("colorDepth"),
-                          usesIndexed4BppEditor() ? 4
-                          : (editScope_ == 1 ? placement.colorDepth : 1));
+                          activeSpriteColorDepth());
             values.insert(QStringLiteral("palette"), placement.palette);
             values.insert(QStringLiteral("flipX"), placement.flipX);
             values.insert(QStringLiteral("flipY"), placement.flipY);
@@ -871,9 +984,13 @@ void EditorProjectController::configureProjectWithTargets(
     huc6270Enabled_ = plannedTargetIds.contains(QStringLiteral("huc6270"));
     vicIiEnabled_ = plannedTargetIds.contains(QStringLiteral("vic-ii"));
     vicEnabled_ = plannedTargetIds.contains(QStringLiteral("vic"));
+    gameBoyEnabled_ = plannedTargetIds.contains(QStringLiteral("game-boy-ppu"));
+    gameBoyColorEnabled_ = plannedTargetIds.contains(QStringLiteral("game-boy-color-ppu"));
+    superNesEnabled_ = plannedTargetIds.contains(QStringLiteral("super-nes-ppu"));
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
-        && !vicIiEnabled_ && !vicEnabled_) {
+        && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
+        && !gameBoyColorEnabled_ && !superNesEnabled_) {
         tms9918aEnabled_ = true;
     }
     plannedTargetIds_.clear();
@@ -888,6 +1005,9 @@ void EditorProjectController::configureProjectWithTargets(
             && id != QStringLiteral("huc6270")
             && id != QStringLiteral("vic-ii")
             && id != QStringLiteral("vic")
+            && id != QStringLiteral("game-boy-ppu")
+            && id != QStringLiteral("game-boy-color-ppu")
+            && id != QStringLiteral("super-nes-ppu")
             && !plannedTargetIds_.contains(id)) {
             plannedTargetIds_.push_back(id);
         }
@@ -896,16 +1016,16 @@ void EditorProjectController::configureProjectWithTargets(
         previewTarget_ = 0;
         editScope_ = 0;
     }
-    if (!targetEnabled(activeTarget()))
-        setActiveTarget(tms9918aEnabled_ ? 0
-                        : (f18aEnabled_ ? 1
-                           : (v9938Enabled_ ? 2
-                              : (v9958Enabled_ ? 3
-                                 : (segaSmsEnabled_ ? 4
-                                    : (segaGenesisEnabled_ ? 5
-                                       : (huc6270Enabled_ ? 6
-                                          : (vicIiEnabled_ ? 7 : 8))))))));
-    else
+    if (!targetEnabled(activeTarget())) {
+        int fallback = 0;
+        for (int candidate = 0; candidate <= 11; ++candidate) {
+            if (targetEnabled(candidate)) {
+                fallback = candidate;
+                break;
+            }
+        }
+        setActiveTarget(fallback);
+    } else
         setActiveTarget(activeTarget());
     emit projectChanged();
 }
@@ -976,7 +1096,7 @@ void EditorProjectController::createProjectWithTargets(
 void EditorProjectController::setPreviewTarget(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(retrovdp::core::TargetProfileId::Vic));
+                       static_cast<int>(retrovdp::core::TargetProfileId::SuperNes));
     if (previewTarget_ == value) return;
     previewTarget_ = value;
     emit projectChanged();
@@ -1044,7 +1164,7 @@ void EditorProjectController::setActiveCharacterPattern(int value)
 
 void EditorProjectController::setCharacterForegroundColorIndex(int value)
 {
-    value = std::clamp(value, 0, 15);
+    value = std::clamp(value, 0, std::max(0, static_cast<int>(characterPaletteColors().size()) - 1));
     if (characterForegroundColorIndex_ == value) return;
     characterForegroundColorIndex_ = value;
     emit projectChanged();
@@ -1052,7 +1172,7 @@ void EditorProjectController::setCharacterForegroundColorIndex(int value)
 
 void EditorProjectController::setCharacterBackgroundColorIndex(int value)
 {
-    value = std::clamp(value, 0, 15);
+    value = std::clamp(value, 0, std::max(0, static_cast<int>(characterPaletteColors().size()) - 1));
     if (characterBackgroundColorIndex_ == value) return;
     characterBackgroundColorIndex_ = value;
     emit projectChanged();
@@ -1826,11 +1946,10 @@ bool EditorProjectController::extractScreenImagePatterns(
     }
 
     const QVariantList paletteValues = characterPaletteColors();
-    std::array<QColor, 16> palette{};
-    for (int index = 0; index < static_cast<int>(palette.size()); ++index) {
-        palette[static_cast<std::size_t>(index)] = index < paletteValues.size()
-            ? paletteValues.at(index).value<QColor>() : QColor(Qt::black);
-    }
+    std::vector<QColor> palette;
+    palette.reserve(static_cast<std::size_t>(std::max<qsizetype>(16, paletteValues.size())));
+    for (const QVariant& value : paletteValues) palette.push_back(value.value<QColor>());
+    while (palette.size() < 16) palette.push_back(QColor(Qt::black));
 
     std::vector<CharacterPatternChange> changes;
     changes.reserve(static_cast<std::size_t>(patternCount));
@@ -1851,7 +1970,8 @@ bool EditorProjectController::extractScreenImagePatterns(
                             (characterY + sourceRow) * patternHeight + pixelRow);
                         int nearest = 0;
                         int nearestDistance = colorDistanceSquared(color, palette[0]);
-                        for (int paletteIndex = 1; paletteIndex < 16; ++paletteIndex) {
+                        for (int paletteIndex = 1;
+                             paletteIndex < static_cast<int>(palette.size()); ++paletteIndex) {
                             const int distance = colorDistanceSquared(
                                 color, palette[static_cast<std::size_t>(paletteIndex)]);
                             if (distance < nearestDistance) {
@@ -2370,13 +2490,13 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                                               {QStringLiteral("priority"), placement.priority}});
         }
         spriteSets.push_back(QJsonObject{{QStringLiteral("name"), set.name},
-                                          {QStringLiteral("capacity"), 80},
+                                          {QStringLiteral("capacity"), 128},
                                           {QStringLiteral("patterns8"),
                                            saveSpriteBank(set.patterns8, 64)},
                                           {QStringLiteral("patterns16"),
                                            saveSpriteBank(set.patterns16, 256)},
                                           {QStringLiteral("patternsGenesis"),
-                                           saveSpriteBank(set.patternsGenesis, 2048)},
+                                           saveSpriteBank(set.patternsGenesis, 4096)},
                                           {QStringLiteral("placements"), placements}});
     }
     QJsonArray spriteEditors;
@@ -2399,6 +2519,10 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
     if (huc6270Enabled_) projectTargets.push_back(QStringLiteral("huc6270"));
     if (vicIiEnabled_) projectTargets.push_back(QStringLiteral("vic-ii"));
     if (vicEnabled_) projectTargets.push_back(QStringLiteral("vic"));
+    if (gameBoyEnabled_) projectTargets.push_back(QStringLiteral("game-boy-ppu"));
+    if (gameBoyColorEnabled_)
+        projectTargets.push_back(QStringLiteral("game-boy-color-ppu"));
+    if (superNesEnabled_) projectTargets.push_back(QStringLiteral("super-nes-ppu"));
     for (const QString& targetId : plannedTargetIds_)
         projectTargets.push_back(targetId);
 
@@ -2433,7 +2557,13 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                      {QStringLiteral("vic-ii"),
                       QJsonObject{{QStringLiteral("enabled"), vicIiEnabled_}}},
                      {QStringLiteral("vic"),
-                      QJsonObject{{QStringLiteral("enabled"), vicEnabled_}}}}},
+                      QJsonObject{{QStringLiteral("enabled"), vicEnabled_}}},
+                     {QStringLiteral("game-boy-ppu"),
+                      QJsonObject{{QStringLiteral("enabled"), gameBoyEnabled_}}},
+                     {QStringLiteral("game-boy-color-ppu"),
+                      QJsonObject{{QStringLiteral("enabled"), gameBoyColorEnabled_}}},
+                     {QStringLiteral("super-nes-ppu"),
+                      QJsonObject{{QStringLiteral("enabled"), superNesEnabled_}}}}},
         {QStringLiteral("preview"), previewName(previewTarget_)},
         {QStringLiteral("editScope"), editScope_ == 1
                                              ? QStringLiteral("f18a-enhancements")
@@ -2545,6 +2675,10 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         huc6270Enabled_ = configuredTargets.contains(QStringLiteral("huc6270"));
         vicIiEnabled_ = configuredTargets.contains(QStringLiteral("vic-ii"));
         vicEnabled_ = configuredTargets.contains(QStringLiteral("vic"));
+        gameBoyEnabled_ = configuredTargets.contains(QStringLiteral("game-boy-ppu"));
+        gameBoyColorEnabled_ = configuredTargets.contains(
+            QStringLiteral("game-boy-color-ppu"));
+        superNesEnabled_ = configuredTargets.contains(QStringLiteral("super-nes-ppu"));
         plannedTargetIds_.clear();
         for (const QJsonValue& targetValue : configuredTargets) {
             const QString targetId = targetValue.toString().trimmed();
@@ -2557,6 +2691,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 && targetId != QStringLiteral("huc6270")
                 && targetId != QStringLiteral("vic-ii")
                 && targetId != QStringLiteral("vic")
+                && targetId != QStringLiteral("game-boy-ppu")
+                && targetId != QStringLiteral("game-boy-color-ppu")
+                && targetId != QStringLiteral("super-nes-ppu")
                 && !plannedTargetIds_.contains(targetId)) {
                 plannedTargetIds_.push_back(targetId);
             }
@@ -2586,20 +2723,27 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                             .value(QStringLiteral("enabled")).toBool(false);
         vicEnabled_ = profiles.value(QStringLiteral("vic")).toObject()
                           .value(QStringLiteral("enabled")).toBool(false);
+        gameBoyEnabled_ = profiles.value(QStringLiteral("game-boy-ppu")).toObject()
+                              .value(QStringLiteral("enabled")).toBool(false);
+        gameBoyColorEnabled_ = profiles.value(
+            QStringLiteral("game-boy-color-ppu")).toObject()
+                                   .value(QStringLiteral("enabled")).toBool(false);
+        superNesEnabled_ = profiles.value(QStringLiteral("super-nes-ppu")).toObject()
+                              .value(QStringLiteral("enabled")).toBool(false);
     }
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
-        && !vicIiEnabled_ && !vicEnabled_)
+        && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
+        && !gameBoyColorEnabled_ && !superNesEnabled_)
         tms9918aEnabled_ = true;
     if (!targetEnabled(activeTarget())) {
-        const int fallbackTarget = tms9918aEnabled_ ? 0
-                                                   : (f18aEnabled_ ? 1
-                                                                  : (v9938Enabled_ ? 2
-                                                                     : (v9958Enabled_ ? 3
-                                                                        : (segaSmsEnabled_ ? 4
-                                                                           : (segaGenesisEnabled_ ? 5
-                                                                              : (huc6270Enabled_ ? 6
-                                                                                 : (vicIiEnabled_ ? 7 : 8)))))));
+        int fallbackTarget = 0;
+        for (int candidate = 0; candidate <= 11; ++candidate) {
+            if (targetEnabled(candidate)) {
+                fallbackTarget = candidate;
+                break;
+            }
+        }
         imageInput_->setTargetProfile(fallbackTarget);
     }
     previewTarget_ = activeTarget();
@@ -2661,7 +2805,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 pattern.indexedOverride = true;
                 for (int pixel = 0; pixel < 64; ++pixel) {
                     pattern.indexedPixels[static_cast<std::size_t>(pixel)] =
-                        static_cast<std::uint8_t>(std::clamp(indexed[pixel].toInt(), 0, 15));
+                        static_cast<std::uint8_t>(std::clamp(
+                            indexed[pixel].toInt(), 0,
+                            (1 << activeCharacterColorDepth()) - 1));
                 }
             }
         }
@@ -2766,7 +2912,7 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                         pattern.f18aPixels[static_cast<std::size_t>(pixel)] =
                             static_cast<std::uint8_t>(std::clamp(
                             enhanced[pixel].toInt(), 0,
-                            usesIndexed4BppEditor() ? 15 : 7));
+                            (1 << activeSpriteColorDepth()) - 1));
                     }
                 }
             }
@@ -2776,10 +2922,10 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         loadSpriteBank(savedSet.value(QStringLiteral("patterns16")).toArray(),
                        set.patterns16, 256);
         loadSpriteBank(savedSet.value(QStringLiteral("patternsGenesis")).toArray(),
-                       set.patternsGenesis, 2048);
+                       set.patternsGenesis, 4096);
         const QJsonArray placements = savedSet.value(QStringLiteral("placements")).toArray();
         for (int index = 0;
-             index < std::min(80, static_cast<int>(placements.size())); ++index) {
+             index < std::min(128, static_cast<int>(placements.size())); ++index) {
             const QJsonObject savedPlacement = placements[index].toObject();
             auto& placement = set.placements[static_cast<std::size_t>(index)];
             placement.x = std::clamp(savedPlacement.value(QStringLiteral("x")).toInt(),
@@ -2797,13 +2943,15 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 savedPlacement.value(QStringLiteral("size")).toInt(8));
             placement.color = std::clamp(
                 savedPlacement.value(QStringLiteral("color")).toInt(15), 1, 15);
-            placement.colorDepth = usesIndexed4BppEditor() ? 4 : std::clamp(
+            placement.colorDepth = usesIndexedSpriteEditor()
+                ? activeSpriteColorDepth() : std::clamp(
                 savedPlacement.value(QStringLiteral("colorDepth")).toInt(1), 1, 3);
             placement.palette = std::clamp(
                 savedPlacement.value(QStringLiteral("palette")).toInt(), 0, 7);
             placement.flipX = savedPlacement.value(QStringLiteral("flipX")).toBool();
             placement.flipY = savedPlacement.value(QStringLiteral("flipY")).toBool();
-            placement.priority = usesGenesisMode5Editor()
+            placement.priority = (usesGenesisMode5Editor() || usesGameBoyEditor()
+                || usesGameBoyColorEditor() || usesSuperNesEditor())
                 && savedPlacement.value(QStringLiteral("priority")).toBool();
         }
         spriteSets_.push_back(std::move(set));
@@ -2944,7 +3092,8 @@ EditorProjectController::characterPatternFromClipboard() const
         pattern.indexedOverride = true;
         for (int index = 0; index < 64; ++index) {
             const int value = pixels[index].toInt(-1);
-            if (value < 0 || value > 15) return std::nullopt;
+            if (value < 0 || value > (1 << activeCharacterColorDepth()) - 1)
+                return std::nullopt;
             pattern.indexedPixels[static_cast<std::size_t>(index)] =
                 static_cast<std::uint8_t>(value);
         }

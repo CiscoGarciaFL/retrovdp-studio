@@ -97,9 +97,9 @@ separate descriptors, encoders, previews, and golden fixtures.
 
 | Target | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| Nintendo Game Boy | game-boy-ppu | Picture processor | Planned | 2-bit planar tiles, tile maps, four-shade assignments, OAM sprites |
-| Nintendo Game Boy Color | game-boy-color-ppu | Picture processor | Planned | Game Boy-compatible assets plus color palettes, bank and map attributes, color OAM data |
-| Super NES 5C77/5C78 family | super-nes-ppu | Picture processor | Planned | 2/4/8-bit planar tiles, mode-described layers, CGRAM palettes, tile maps, OAM sprites |
+| Nintendo Game Boy | game-boy-ppu | Picture processor | Implemented | 2-bit planar tiles, tile maps, four-shade assignments, OAM sprites |
+| Nintendo Game Boy Color | game-boy-color-ppu | Picture processor | Implemented | Game Boy-compatible assets plus color palettes, bank and map attributes, color OAM data |
+| Super NES 5C77/5C78 family | super-nes-ppu | Picture processor | Implemented | Mode 0/1/3 BG1, 2/4/8-bit planar tiles, CGRAM palettes, tile maps, OAM sprites |
 | NEC/Hudson HuC6270 family (PC Engine/TurboGrafx-16) | huc6270 | Video processor | Implemented | 256/320×224 4-bit planar patterns, background attribute table, 16 background palette banks, VDC/VCE state, compound sprite authoring |
 
 Game Boy and Game Boy Color are separate profiles because color palettes,
@@ -382,8 +382,9 @@ shared structured-editor export work:
 
 1. Master System: add native sprite pattern and SAT serialization to the
    implemented editor interpretation.
-2. Game Boy: 2-bit tiles, maps, palette assignments, and OAM.
-3. Game Boy Color: color palettes, attribute maps, banking, and color OAM.
+2. Game Boy: implemented 2-bit tiles, maps, palette assignments, and OAM.
+3. Game Boy Color: implemented color palettes, attribute maps, banking, and
+   color OAM.
 4. HuC6270: maintain the implemented 4-bit background compiler and compound
    sprite editor; add native structured sprite-table serialization.
 
@@ -400,11 +401,12 @@ structured-editor sprite pattern/SAT link serialization.
 
 1. Genesis/Mega Drive: finish Scroll B/Window design surfaces, compound
    objects, and SAT link generation on the implemented Mode V foundation.
-2. Super NES: mode descriptors, 2/4/8-bit planar encoders, layer maps, CGRAM,
-   and OAM.
+2. Super NES: implemented BG1 mode descriptors, 2/4/8-bit planar encoders,
+   maps, CGRAM, and OAM; additional layer composition remains future work.
 
-Mode-specific capabilities must control the interface. The Super NES should
-not expose every bit depth, layer count, and color rule simultaneously.
+Mode-specific capabilities control the interface: the Super NES exposes the
+selected mode's bit depth and palette rules rather than presenting every
+hardware option simultaneously.
 
 ### Wave 5: character and wide-pixel systems
 
