@@ -10,6 +10,7 @@
 #include <QClipboard>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
@@ -2657,20 +2658,14 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
         QStringLiteral("supportedTargetsAction"));
     QObject* supportedTargetsMenuItem = window->findChild<QObject*>(
         QStringLiteral("supportedTargetsMenuItem"));
-    const bool supportedTargetsOpened = supportedTargetsAction != nullptr
-        && QMetaObject::invokeMethod(supportedTargetsAction, "trigger");
-    test.expect(supportedTargetsOpened && supportedTargetsMenuItem != nullptr
+    test.expect(supportedTargetsAction != nullptr
+                    && supportedTargetsMenuItem != nullptr
                     && targetSupportDialog != nullptr
-                    && waitFor([&] {
-                        return targetSupportDialog->property("visible").toBool();
-                    })
                     && targetSupportDialog->property("catalogReady").toBool()
-                    && targetSupportDialog->property("targetCount").toInt() == 12
-                    && window->findChild<QObject*>(
-                           QStringLiteral("targetSupportCatalogGrid")) != nullptr,
-                "Help should open the complete bundled Supported Targets catalog immediately");
-    if (targetSupportDialog != nullptr)
-        QMetaObject::invokeMethod(targetSupportDialog, "close");
+                    && targetSupportDialog->property("targetCount").toInt() == 20
+                    && targetSupportDialog->property("categoryCount").toInt() == 5
+                    && targetSupportDialog->property("plannedTargetCount").toInt() == 8,
+                "Help should expose all 20 bundled Supported Targets entries immediately");
     QObject* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
     const bool aboutOpened = aboutAction != nullptr
         && QMetaObject::invokeMethod(aboutAction, "trigger");
@@ -3735,12 +3730,22 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                 "vertical layout should start with two equal-size stacked panes");
 
     window->setProperty("previewLayout", 1);
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
     test.expect(waitFor([&] {
-                    const QObject* horizontal = window->findChild<QObject*>(
+                    const auto horizontalLayouts = window->findChildren<QObject*>(
                         QStringLiteral("horizontalPreviewLayout"));
-                    const QObject* source = visiblePane(QStringLiteral("sourcePreview"));
-                    const QObject* converted =
-                        visiblePane(QStringLiteral("convertedPreview"));
+                    if (horizontalLayouts.size() != 1) return false;
+                    const QObject* horizontal = horizontalLayouts.constFirst();
+                    const QObject* source = horizontal != nullptr
+                        ? horizontal->findChild<QObject*>(
+                              QStringLiteral("sourcePreview"))
+                        : nullptr;
+                    const QObject* converted = horizontal != nullptr
+                        ? horizontal->findChild<QObject*>(
+                              QStringLiteral("convertedPreview"))
+                        : nullptr;
                     bool hasVisibleSourceTitle = false;
                     bool hasNamedConvertedTitle = false;
                     for (const QObject* sourceTitle : window->findChildren<QObject*>(
@@ -3754,6 +3759,8 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                                 == QStringLiteral("Screen Image");
                     }
                     return horizontal != nullptr && source != nullptr && converted != nullptr
+                        && source->property("visible").toBool()
+                        && converted->property("visible").toBool()
                         && qAbs(source->property("width").toReal()
                                 - converted->property("width").toReal())
                             <= 1.0
@@ -3764,8 +3771,16 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                 }),
                 "horizontal layout should start with equal-size Source and Screen Image panes");
 
-    QObject* sourcePane = visiblePane(QStringLiteral("sourcePreview"));
-    QObject* convertedPane = visiblePane(QStringLiteral("convertedPreview"));
+    QObject* horizontalPreviewLayout = window->findChild<QObject*>(
+        QStringLiteral("horizontalPreviewLayout"));
+    QObject* sourcePane = horizontalPreviewLayout != nullptr
+        ? horizontalPreviewLayout->findChild<QObject*>(
+              QStringLiteral("sourcePreview"))
+        : nullptr;
+    QObject* convertedPane = horizontalPreviewLayout != nullptr
+        ? horizontalPreviewLayout->findChild<QObject*>(
+              QStringLiteral("convertedPreview"))
+        : nullptr;
     const QObject* updateConversionButton =
         window->findChild<QObject*>(QStringLiteral("updateConversionButton"));
     const QObject* livePreviewSwitch =
@@ -4599,6 +4614,22 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                         && window->findChild<QObject*>(QStringLiteral("spriteEditorTab")) != nullptr;
                 }),
                 "Tabbed view should populate Source and every available mode while disabling the Mode menu");
+
+    // Instantiate the image-heavy catalog after the workspace lifecycle checks so
+    // its delegates cannot contend with workspace delegate incubation on slower CI
+    // renderers. The production dialog remains immediate when the user opens it.
+    const bool supportedTargetsOpened = supportedTargetsAction != nullptr
+        && QMetaObject::invokeMethod(supportedTargetsAction, "trigger");
+    const bool targetSupportVisible = targetSupportDialog != nullptr
+        && waitFor([&] {
+            return targetSupportDialog->property("visible").toBool()
+                && window->findChild<QObject*>(
+                       QStringLiteral("targetSupportCatalogGrid")) != nullptr;
+        });
+    test.expect(supportedTargetsOpened && targetSupportVisible,
+                "Help should open the categorized Supported Targets catalog");
+    if (targetSupportDialog != nullptr)
+        QMetaObject::invokeMethod(targetSupportDialog, "close");
 }
 
 void testTargetSupportDeliverables(TestContext& test)
@@ -4610,7 +4641,8 @@ void testTargetSupportDeliverables(TestContext& test)
     const TargetSupportCatalog bundledCatalog(catalogPath);
     test.expect(bundledCatalog.ready()
                     && bundledCatalog.errorMessage().isEmpty()
-                    && bundledCatalog.targets().size() == 12,
+                    && bundledCatalog.categories().size() == 5
+                    && bundledCatalog.targets().size() == 20,
                 "the application catalog loader should synchronously expose all bundled targets");
     QFile catalogFile(catalogPath);
     test.expect(catalogFile.open(QIODevice::ReadOnly),
@@ -4626,19 +4658,33 @@ void testTargetSupportDeliverables(TestContext& test)
     if (!document.isObject()) return;
 
     const QJsonObject root = document.object();
+    const QJsonArray categories = root.value(QStringLiteral("categories")).toArray();
     const QJsonArray targets = root.value(QStringLiteral("targets")).toArray();
     int imageCount = 0;
+    int plannedCount = 0;
+    QSet<QString> categoryIds;
+    for (const QJsonValue& categoryValue : categories) {
+        const QJsonObject category = categoryValue.toObject();
+        categoryIds.insert(category.value(QStringLiteral("id")).toString());
+    }
     bool complete = root.value(QStringLiteral("schema")).toString()
                         == QStringLiteral("retrovdp.target-support/v1")
-        && targets.size() == 12;
+        && categories.size() == 5 && categoryIds.size() == 5
+        && targets.size() == 20;
     for (const QJsonValue& targetValue : targets) {
         const QJsonObject target = targetValue.toObject();
+        const QString status = target.value(QStringLiteral("status")).toString();
+        if (status == QStringLiteral("planned")) ++plannedCount;
         const QJsonObject workspaces = target.value(
             QStringLiteral("workspaces")).toObject();
         complete = complete
             && !target.value(QStringLiteral("id")).toString().isEmpty()
             && !target.value(QStringLiteral("name")).toString().isEmpty()
             && !target.value(QStringLiteral("hardware")).toString().isEmpty()
+            && categoryIds.contains(
+                target.value(QStringLiteral("category")).toString())
+            && (status == QStringLiteral("implemented")
+                || status == QStringLiteral("planned"))
             && !target.value(QStringLiteral("modes")).toArray().isEmpty()
             && !workspaces.value(QStringLiteral("screenImage")).toString().isEmpty()
             && !workspaces.value(QStringLiteral("character")).toString().isEmpty()
@@ -4661,8 +4707,8 @@ void testTargetSupportDeliverables(TestContext& test)
                 && !imageEntry.value(QStringLiteral("credit")).toString().isEmpty();
         }
     }
-    test.expect(complete && imageCount == 19,
-                "all target summaries and 19 bundled offline photographs should be complete and decodable");
+    test.expect(complete && plannedCount == 8 && imageCount == 29,
+                "all 20 target summaries and 29 bundled offline photographs should be complete and decodable");
 }
 
 } // namespace
