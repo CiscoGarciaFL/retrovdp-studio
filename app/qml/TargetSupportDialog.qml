@@ -15,6 +15,10 @@ Dialog {
     property bool catalogLoaded: false
     readonly property string catalogUrl: "qrc:/qt/qml/RetroVDPStudio/data/target-support/targets.json"
 
+    function bundledImageUrl(relativePath) {
+        return relativePath ? Qt.resolvedUrl("../" + relativePath) : ""
+    }
+
     function loadCatalog() {
         const request = new XMLHttpRequest()
         request.onreadystatechange = function() {
@@ -46,7 +50,7 @@ Dialog {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             color: palette.placeholderText
-            text: qsTr("Implemented targets are summarized against real consumer-product photographs. Images are loaded from their credited source pages; when a source is unavailable, the card keeps its hardware summary and shows an offline placeholder.")
+            text: qsTr("Implemented targets are summarized with bundled real consumer-product photographs and work fully offline. Source pages remain available for credit and reference; online loading is offered only if a bundled image cannot be decoded.")
         }
 
         Label {
@@ -126,27 +130,36 @@ Dialog {
 
                                         Image {
                                             id: photo
-                                            property bool attemptedRemote: false
+                                            objectName: "targetSupportPhoto"
+                                            property bool useOnlineSource: false
                                             anchors.fill: parent
                                             anchors.margins: 2
-                                            source: modelData.local && !attemptedRemote
-                                                    ? "qrc:/qt/qml/RetroVDPStudio/" + modelData.local
-                                                    : modelData.url
-                                            asynchronous: true
+                                            source: useOnlineSource
+                                                    ? modelData.url
+                                                    : root.bundledImageUrl(modelData.local)
+                                            asynchronous: false
+                                            cache: true
                                             fillMode: Image.PreserveAspectFit
                                             sourceSize.width: 320
                                             sourceSize.height: 180
-                                            onStatusChanged: {
-                                                if (status === Image.Error && modelData.local
-                                                        && !attemptedRemote)
-                                                    attemptedRemote = true
-                                            }
                                         }
 
                                         MouseArea {
                                             anchors.fill: parent
+                                            enabled: photo.status === Image.Ready
+                                            hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: Qt.openUrlExternally(modelData.sourcePage)
+                                            ToolTip.visible: containsMouse
+                                            ToolTip.text: qsTr("Open photo source")
+                                        }
+
+                                        Button {
+                                            anchors.centerIn: parent
+                                            visible: photo.status === Image.Error
+                                                     && !photo.useOnlineSource
+                                            text: qsTr("Load online")
+                                            onClicked: photo.useOnlineSource = true
                                         }
                                     }
                                 }
