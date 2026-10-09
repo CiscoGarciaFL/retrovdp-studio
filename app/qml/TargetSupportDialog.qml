@@ -11,9 +11,24 @@ Dialog {
     width: Math.min(parent ? parent.width - 36 : 980, 980)
     height: Math.min(parent ? parent.height - 36 : 760, 760)
 
+    SystemPalette {
+        id: activeSystemPalette
+        colorGroup: SystemPalette.Active
+    }
+
     readonly property var categories: targetSupportCatalog.categories
     readonly property var targets: targetSupportCatalog.targets
+    readonly property var projectTargets: editorProject.supportedTargets
     readonly property bool catalogReady: targetSupportCatalog.ready
+    readonly property string activeTargetId: editorProject.activeTargetInfo.id
+    readonly property bool activeTargetInCatalog: catalogContainsTarget(activeTargetId)
+    readonly property int selectedCatalogTargetCount: countSelectedCatalogTargets()
+    readonly property color selectedTargetPanelColor: Qt.rgba(
+                                                          activeSystemPalette.highlight.r,
+                                                          activeSystemPalette.highlight.g,
+                                                          activeSystemPalette.highlight.b,
+                                                          0.32)
+    readonly property color activeTargetBorderColor: "white"
     readonly property int categoryCount: categories.length
     readonly property int targetCount: targets.length
     readonly property int plannedTargetCount: countPlannedTargets()
@@ -36,6 +51,31 @@ Dialog {
                 matches.push(targets[index]);
         }
         return matches;
+    }
+
+    function catalogContainsTarget(targetId) {
+        for (let index = 0; index < targets.length; ++index) {
+            if (String(targets[index].id) === String(targetId))
+                return true;
+        }
+        return false;
+    }
+
+    function projectTargetSelected(targetId) {
+        for (let index = 0; index < projectTargets.length; ++index) {
+            if (String(projectTargets[index].id) === String(targetId))
+                return true;
+        }
+        return false;
+    }
+
+    function countSelectedCatalogTargets() {
+        let count = 0;
+        for (let index = 0; index < targets.length; ++index) {
+            if (projectTargetSelected(targets[index].id))
+                ++count;
+        }
+        return count;
     }
 
     function countPlannedTargets() {
@@ -126,7 +166,14 @@ Dialog {
                                     model: root.targetsForCategory(categorySection.modelData.id)
 
                                     delegate: Frame {
+                                        id: targetCard
                                         required property var modelData
+                                        readonly property string targetId: String(modelData.id)
+                                        readonly property bool projectSelected:
+                                            root.projectTargetSelected(targetId)
+                                        readonly property bool projectActive: targetId
+                                                                              === String(root.activeTargetId)
+                                        objectName: "targetSupportCard"
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: categoryGrid.columns === 2 ? (
                                                                                                 categoryGrid.width
@@ -135,6 +182,17 @@ Dialog {
                                         Layout.preferredHeight: 350
                                         Layout.alignment: Qt.AlignTop
                                         padding: 10
+
+                                        background: Rectangle {
+                                            radius: 4
+                                            color: targetCard.projectSelected
+                                                   ? root.selectedTargetPanelColor
+                                                   : targetCard.palette.base
+                                            border.color: targetCard.projectActive
+                                                          ? root.activeTargetBorderColor
+                                                          : targetCard.palette.mid
+                                            border.width: targetCard.projectActive ? 2 : 1
+                                        }
 
                                         ColumnLayout {
                                             anchors.fill: parent

@@ -105,6 +105,7 @@ EditorProjectController::EditorProjectController(ImageInputController* imageInpu
         connect(clipboard, &QClipboard::dataChanged,
                 this, &EditorProjectController::projectChanged);
     }
+    if (!targetEnabled(activeTarget())) setActiveTarget(0);
 }
 
 QString imageDataUrl(const QImage& image)
@@ -136,6 +137,7 @@ QVariantList EditorProjectController::supportedTargets() const
         const auto& profile = retrovdp::core::targetProfile(id);
         result.push_back(QVariantMap{
             {QStringLiteral("name"), QString::fromLatin1(profile.displayName)},
+            {QStringLiteral("id"), QString::fromStdString(profile.stableId.value())},
             {QStringLiteral("value"), static_cast<int>(id)},
         });
     };
