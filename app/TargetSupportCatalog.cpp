@@ -31,13 +31,19 @@ TargetSupportCatalog::TargetSupportCatalog(const QString& catalogPath,
     }
 
     const QJsonObject root = document.object();
+    const QJsonValue categoriesValue = root.value(QStringLiteral("categories"));
     const QJsonValue targetsValue = root.value(QStringLiteral("targets"));
+    if (!categoriesValue.isArray() || categoriesValue.toArray().isEmpty()) {
+        errorMessage_ = tr("The bundled target catalog has no categories array.");
+        return;
+    }
     if (!targetsValue.isArray()) {
         errorMessage_ = tr("The bundled target catalog has no targets array.");
         return;
     }
 
     catalog_ = root.toVariantMap();
+    categories_ = categoriesValue.toArray().toVariantList();
     targets_ = targetsValue.toArray().toVariantList();
 }
 
@@ -49,6 +55,11 @@ QVariantMap TargetSupportCatalog::catalog() const
 QVariantList TargetSupportCatalog::targets() const
 {
     return targets_;
+}
+
+QVariantList TargetSupportCatalog::categories() const
+{
+    return categories_;
 }
 
 bool TargetSupportCatalog::ready() const

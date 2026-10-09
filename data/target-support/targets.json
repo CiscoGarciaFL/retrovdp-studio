@@ -2,9 +2,16 @@
   "schema": "retrovdp.target-support/v1",
   "title": "RetroVDP Studio target support catalog",
   "imagePolicy": "Bundled real-product photography for offline use; each image retains its original URL, source page, license, and credit metadata.",
+  "categories": [
+    {"id": "video-display-processors", "title": "True video display processors (VDP)"},
+    {"id": "picture-processors", "title": "Picture processors (PPU)"},
+    {"id": "object-processors", "title": "Object processors"},
+    {"id": "display-adapters", "title": "Display adapters"},
+    {"id": "character-display", "title": "Character-display hardware"}
+  ],
   "targets": [
     {
-      "id": "tms9918a", "name": "TMS9918A", "kind": "VDP", "status": "implemented",
+      "id": "tms9918a", "name": "TMS9918A", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Texas Instruments TI-99/4A and MSX1-era systems", "vramBytes": 16384,
       "modes": ["bitmap-9918a", "greyscale-bitmap-9918a", "black-and-white-bitmap-9918a", "multicolor-9918", "dual-multicolor-9918", "half-multicolor-9918a", "bitmap-color-only-9918a"],
       "workspaces": {"screenImage": "native bitmap and tile-compatible conversion", "character": "native 8x8 pattern and map authoring", "sprite": "native fixed-color sprite authoring"},
@@ -14,7 +21,7 @@
       ]
     },
     {
-      "id": "f18a", "name": "F18A", "kind": "VDP upgrade", "status": "implemented",
+      "id": "f18a", "name": "F18A", "category": "video-display-processors", "kind": "VDP upgrade", "status": "implemented",
       "hardware": "FPGA replacement/upgrade for TMS9918A host systems", "vramBytes": 131072,
       "modes": ["paletted-bitmap-f18a", "scanline-palette-bitmap-f18a"],
       "workspaces": {"screenImage": "native enhanced-color bitmap conversion", "character": "native indexed enhanced-color patterns", "sprite": "native enhanced-color sprite overrides"},
@@ -24,7 +31,7 @@
       ]
     },
     {
-      "id": "v9938", "name": "Yamaha V9938", "kind": "VDP", "status": "implemented",
+      "id": "v9938", "name": "Yamaha V9938", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Myarc Geneve 9640, MSX2 and compatible home computers", "vramBytes": 131072,
       "modes": ["screen-5-v9938", "screen-6-v9938", "screen-7-v9938", "screen-8-v9938"],
       "workspaces": {"screenImage": "native screen 5/6/7/8 conversion", "character": "native indexed character/map authoring", "sprite": "native compatible sprite authoring"},
@@ -34,14 +41,14 @@
       ]
     },
     {
-      "id": "v9958", "name": "Yamaha V9958", "kind": "VDP", "status": "implemented",
+      "id": "v9958", "name": "Yamaha V9958", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Panasonic FS-A1WX and compatible MSX2+ home computers", "vramBytes": 131072,
       "modes": ["screen-10-v9958", "screen-11-v9958", "screen-12-v9958"],
       "workspaces": {"screenImage": "native YJK/YAE screen conversion", "character": "native compatible character/map authoring", "sprite": "native compatible sprite authoring"},
       "images": [{"local": "assets/targets/v9958/panasonic-fs-a1wx.jpg", "url": "https://usbsecretbase.michikusa.jp/a1fx_wx/img/fs-a1wx.jpg", "sourcePage": "https://usbsecretbase.michikusa.jp/a1fx_wx/index.html", "license": "Refer to source page", "credit": "USB Secret Base FS-A1WX photograph"}]
     },
     {
-      "id": "sega-sms-vdp", "name": "Sega Master System", "kind": "VDP", "status": "implemented",
+      "id": "sega-sms-vdp", "name": "Sega Master System", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Sega Master System / Mark III", "vramBytes": 16384,
       "modes": ["mode-4-sms-192", "mode-4-sms-224", "mode-4-sms-240-pal"],
       "workspaces": {"screenImage": "native Mode 4 tile conversion", "character": "native 4bpp patterns and name table", "sprite": "native 64-entry 4bpp SAT authoring"},
@@ -51,35 +58,38 @@
       ]
     },
     {
-      "id": "sega-genesis-vdp", "name": "Sega Genesis / Mega Drive", "kind": "VDP", "status": "implemented",
+      "id": "sega-genesis-vdp", "name": "Sega Genesis / Mega Drive", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Sega Genesis / Mega Drive", "vramBytes": 65536,
       "modes": ["mode-5-genesis-h32", "mode-5-genesis-h40", "mode-5-genesis-h32-pal", "mode-5-genesis-h40-pal"],
       "workspaces": {"screenImage": "native Mode V packed tile conversion", "character": "native packed-nibble patterns and multi-plane maps", "sprite": "native rectangular 4bpp sprite authoring"},
       "images": [{"local": "assets/targets/sega-genesis-vdp/mega-drive-genesis.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sega%20Mega%20Drive%20and%20Genesis.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Sega_Mega_Drive_and_Genesis.jpg", "license": "Creative Commons license (see source page)", "credit": "Wikimedia Commons"}]
     },
     {
-      "id": "huc6270", "name": "NEC / Hudson HuC6270", "kind": "PPU/VDC", "status": "implemented",
+      "id": "huc6270", "name": "NEC / Hudson HuC6270", "category": "video-display-processors", "kind": "PPU/VDC", "status": "implemented",
       "hardware": "NEC PC Engine / TurboGrafx-16 video subsystem", "vramBytes": 65536,
       "modes": ["huc6270-background-256x224", "huc6270-background-320x224"],
       "workspaces": {"screenImage": "native BAT and 4-plane tile conversion", "character": "native 4bpp patterns and BAT authoring", "sprite": "native compound 4bpp sprite authoring"},
-      "images": [{"local": "assets/targets/huc6270/pc-engine.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/PC%20Engine%20(top%20view).jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:PC_Engine_(top_view).jpg", "license": "CC BY-SA 2.0 (see source page)", "credit": "Bryan Ochalla / Wikimedia Commons"}]
+      "images": [
+        {"local": "assets/targets/huc6270/pc-engine.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/PC%20Engine%20(top%20view).jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:PC_Engine_(top_view).jpg", "license": "CC BY-SA 2.0", "credit": "Bryan Ochalla / Wikimedia Commons"},
+        {"local": "assets/targets/huc6270/turbografx16-console-set.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/TurboGrafx16-Console-Set.jpg/960px-TurboGrafx16-Console-Set.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:TurboGrafx16-Console-Set.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}
+      ]
     },
     {
-      "id": "vic-ii", "name": "MOS VIC-II", "kind": "VDP", "status": "implemented",
+      "id": "vic-ii", "name": "MOS VIC-II", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Commodore 64 home computer", "vramBytes": 16384,
       "modes": ["vic-ii-hires-character", "vic-ii-multicolor-character", "vic-ii-hires-bitmap", "vic-ii-multicolor-bitmap"],
       "workspaces": {"screenImage": "native character and bitmap conversion", "character": "native high-resolution and constrained multicolor authoring", "sprite": "native 24x21 sprite authoring"},
       "images": [{"local": "assets/targets/vic-ii/commodore64.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Commodore64.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Commodore64.jpg", "license": "Refer to source page", "credit": "Bill Bertram / Wikimedia Commons"}]
     },
     {
-      "id": "vic", "name": "MOS VIC", "kind": "VDP", "status": "implemented",
+      "id": "vic", "name": "MOS VIC", "category": "video-display-processors", "kind": "VDP", "status": "implemented",
       "hardware": "Commodore VIC-20 home computer", "vramBytes": 8192,
       "modes": ["vic-hires-character", "vic-multicolor-character"],
       "workspaces": {"screenImage": "native high-resolution and multicolor conversion", "character": "native character authoring", "sprite": "not applicable"},
       "images": [{"local": "assets/targets/vic/vic20.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Commodore%20VC20%20(41133732354).jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Commodore_VC20_(41133732354).jpg", "license": "Refer to source page", "credit": "Wolfgang Stief / Wikimedia Commons"}]
     },
     {
-      "id": "game-boy-ppu", "name": "Nintendo Game Boy", "kind": "PPU", "status": "implemented",
+      "id": "game-boy-ppu", "name": "Nintendo Game Boy", "category": "picture-processors", "kind": "PPU", "status": "implemented",
       "hardware": "Nintendo Game Boy DMG", "vramBytes": 8192,
       "modes": ["game-boy-background"],
       "workspaces": {"screenImage": "native 160x144 2bpp background conversion", "character": "native 384-tile storage and map authoring", "sprite": "native 40-entry 2bpp OAM authoring"},
@@ -89,7 +99,7 @@
       ]
     },
     {
-      "id": "game-boy-color-ppu", "name": "Nintendo Game Boy Color", "kind": "PPU", "status": "implemented",
+      "id": "game-boy-color-ppu", "name": "Nintendo Game Boy Color", "category": "picture-processors", "kind": "PPU", "status": "implemented",
       "hardware": "Nintendo Game Boy Color", "vramBytes": 16384,
       "modes": ["game-boy-color-background"],
       "workspaces": {"screenImage": "native banked 2bpp background conversion", "character": "native two-bank tiles and attribute map", "sprite": "native 40-entry color OAM authoring"},
@@ -99,13 +109,72 @@
       ]
     },
     {
-      "id": "super-nes-ppu", "name": "Nintendo Super NES / Super Famicom", "kind": "PPU", "status": "implemented",
+      "id": "super-nes-ppu", "name": "Nintendo Super NES / Super Famicom", "category": "picture-processors", "kind": "PPU", "status": "implemented",
       "hardware": "Nintendo Super NES / Super Famicom 5C77/5C78", "vramBytes": 65536,
       "modes": ["super-nes-mode-0-background", "super-nes-mode-1-background", "super-nes-mode-3-background"],
       "workspaces": {"screenImage": "native BG1 Mode 0/1/3 conversion", "character": "native mode-selected 2/4/8bpp patterns and map", "sprite": "native 128-entry 4bpp OAM authoring"},
       "images": [
         {"local": "assets/targets/super-nes-ppu/super-famicom-set.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo-Super-Famicom-Set-FL.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Nintendo-Super-Famicom-Set-FL.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"},
-        {"local": "assets/targets/super-nes-ppu/super-famicom-console.jpg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo-Super-Famicom-Console-BR.jpg?width=640", "sourcePage": "https://commons.wikimedia.org/wiki/File:Nintendo-Super-Famicom-Console-BR.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}
+        {"local": "assets/targets/super-nes-ppu/snes-console-set.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/SNES-Mod1-Console-Set.jpg/960px-SNES-Mod1-Console-Set.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:SNES-Mod1-Console-Set.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}
+      ]
+    },
+    {
+      "id": "atari-lynx", "name": "Atari Lynx Suzy / Mikey", "category": "object-processors", "kind": "Object processor", "status": "planned",
+      "hardware": "Atari Lynx and Lynx II handheld consoles", "vramBytes": 65536,
+      "modes": ["lynx-suzy-object-engine", "lynx-mikey-160x102"],
+      "workspaces": {"screenImage": "planned 160x102 packed-pixel conversion", "character": "planned software-tile workflow", "sprite": "planned Suzy object-list sprite authoring"},
+      "images": [{"local": "assets/targets/atari-lynx/atari-lynx-ii.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Atari-Lynx-II-Handheld-Angled.jpg/960px-Atari-Lynx-II-Handheld-Angled.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Atari-Lynx-II-Handheld-Angled.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}]
+    },
+    {
+      "id": "neo-geo", "name": "SNK Neo Geo", "category": "object-processors", "kind": "Object processor", "status": "planned",
+      "hardware": "SNK Neo Geo AES home console", "vramBytes": 65536,
+      "modes": ["neo-geo-fixed-layer", "neo-geo-chained-sprites"],
+      "workspaces": {"screenImage": "planned fixed-layer and sprite composition", "character": "planned 8x8 fixed-layer tile authoring", "sprite": "planned chained 16x16 object authoring"},
+      "images": [{"local": "assets/targets/neo-geo/neo-geo-aes.png", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Neo-Geo-AES-Console-Set.png/960px-Neo-Geo-AES-Console-Set.png", "sourcePage": "https://commons.wikimedia.org/wiki/File:Neo-Geo-AES-Console-Set.png", "license": "CC BY-SA 3.0", "credit": "Evan-Amos / Wikimedia Commons"}]
+    },
+    {
+      "id": "amstrad-cpc", "name": "Amstrad CPC", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "hardware": "Amstrad CPC 464/664/6128 home computers", "vramBytes": 16384,
+      "modes": ["cpc-mode-0", "cpc-mode-1", "cpc-mode-2"],
+      "workspaces": {"screenImage": "planned Mode 0/1/2 screen conversion", "character": "planned software-defined character authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "images": [{"local": "assets/targets/amstrad-cpc/amstrad-cpc464.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Amstrad_CPC464.jpg/960px-Amstrad_CPC464.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Amstrad_CPC464.jpg", "license": "CC BY-SA 2.5", "credit": "Bill Bertram / Wikimedia Commons"}]
+    },
+    {
+      "id": "ibm-cga", "name": "IBM Color/Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "hardware": "IBM PC/XT-class systems with CGA and IBM 5153 display", "vramBytes": 16384,
+      "modes": ["cga-text-40x25", "cga-text-80x25", "cga-320x200", "cga-640x200"],
+      "workspaces": {"screenImage": "planned CGA text and graphics conversion", "character": "planned ROM-font and text-buffer authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "images": [{"local": "assets/targets/ibm-cga/ibm-pc-xt-5153.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/IBM_Personal_Computer_XT_with_5153_Color_Monitor_%2853998049768%29.jpg/960px-IBM_Personal_Computer_XT_with_5153_Color_Monitor_%2853998049768%29.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:IBM_Personal_Computer_XT_with_5153_Color_Monitor_(53998049768).jpg", "license": "CC BY-SA 2.0", "credit": "Ethan Long / Wikimedia Commons"}]
+    },
+    {
+      "id": "ibm-ega", "name": "IBM Enhanced Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "hardware": "IBM PC/AT-class systems with EGA and IBM 5154 display", "vramBytes": 262144,
+      "modes": ["ega-text", "ega-320x200", "ega-640x350"],
+      "workspaces": {"screenImage": "planned planar 16-color EGA conversion", "character": "planned programmable-font and text-buffer authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "images": [{"local": "assets/targets/ibm-ega/ibm-5154-monitors.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/IBM_5151%2C_5153%2C_5154_monitors.jpg/960px-IBM_5151%2C_5153%2C_5154_monitors.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:IBM_5151,_5153,_5154_monitors.jpg", "license": "CC0", "credit": "phreakindee (LGR) / Wikimedia Commons"}]
+    },
+    {
+      "id": "apple-iie", "name": "Apple IIe", "category": "display-adapters", "kind": "Display hardware", "status": "planned",
+      "hardware": "Apple IIe home computer and Monitor II", "vramBytes": 16384,
+      "modes": ["apple-iie-text", "apple-iie-lores", "apple-iie-hires", "apple-iie-double-hires"],
+      "workspaces": {"screenImage": "planned text, lo-res, hi-res and double-hi-res conversion", "character": "planned text and shape-table authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "images": [{"local": "assets/targets/apple-iie/apple-iie-system.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG/960px-Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG", "sourcePage": "https://commons.wikimedia.org/wiki/File:Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG", "license": "CC BY-SA 3.0", "credit": "Mystère Martin / Wikimedia Commons"}]
+    },
+    {
+      "id": "timex-ts1000", "name": "Timex Sinclair 1000 / ZX81-class", "category": "character-display", "kind": "Character display", "status": "planned",
+      "hardware": "Timex Sinclair 1000 and Sinclair ZX81-class home computers", "vramBytes": 1024,
+      "modes": ["zx81-text-32x24", "zx81-semigraphics-64x48"],
+      "workspaces": {"screenImage": "planned monochrome character-display conversion", "character": "planned ROM-glyph and display-file authoring", "sprite": "not applicable"},
+      "images": [{"local": "assets/targets/timex-ts1000/timex-sinclair-1000.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Timex_Sinclair_1000.jpg/960px-Timex_Sinclair_1000.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Timex_Sinclair_1000.jpg", "license": "CC BY-SA 4.0", "credit": "Joho345 / Wikimedia Commons"}]
+    },
+    {
+      "id": "trs80-model1-3", "name": "TRS-80 Model I / III", "category": "character-display", "kind": "Character display", "status": "planned",
+      "hardware": "Tandy/Radio Shack TRS-80 Model I and Model III computers", "vramBytes": 1024,
+      "modes": ["trs80-text-64x16", "trs80-semigraphics-128x48"],
+      "workspaces": {"screenImage": "planned text and semigraphics conversion", "character": "planned character-cell and semigraphics authoring", "sprite": "not applicable"},
+      "images": [
+        {"local": "assets/targets/trs80-model1-3/trs80-model-i.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Tandy_TRS-80_Model_I.jpg/960px-Tandy_TRS-80_Model_I.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Tandy_TRS-80_Model_I.jpg", "license": "CC0", "credit": "Prolete / Wikimedia Commons"},
+        {"local": "assets/targets/trs80-model1-3/trs80-model-iii.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/TRS-80_Model_III.jpg/960px-TRS-80_Model_III.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:TRS-80_Model_III.jpg", "license": "CC BY-SA 2.0", "credit": "Jeff Kubina / Wikimedia Commons"}
       ]
     }
   ]
