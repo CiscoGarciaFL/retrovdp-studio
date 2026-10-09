@@ -12,8 +12,25 @@ $deployQt = 'C:\Qt\6.10.3\mingw_64\bin\windeployqt.exe'
 $env:PATH = 'C:\Qt\Tools\mingw1310_64\bin;C:\Qt\6.10.3\mingw_64\bin;' `
     + $env:PATH
 $preset = "windows-mingw-$($Configuration.ToLowerInvariant())"
+$buildDirectory = Join-Path $projectRoot "build/$preset"
 $executable = Join-Path $projectRoot "build/$preset/bin/RetroVDPStudio.exe"
 $qmlDirectory = Join-Path $projectRoot 'app/qml'
+
+function Get-NormalizedPath([string]$Path) {
+    if ([string]::IsNullOrWhiteSpace($Path)) { return '' }
+    return [IO.Path]::GetFullPath($Path).TrimEnd(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar)
+}
+
+function Get-CMakeCacheValue([string]$CachePath, [string]$Key) {
+    $prefix = "$Key="
+    $entry = Get-Content -LiteralPath $CachePath | Where-Object {
+        $_.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+    } | Select-Object -First 1
+    if ($null -eq $entry) { return '' }
+    return $entry.Substring($prefix.Length)
+}
 
 foreach ($requiredTool in @($cmake, $deployQt)) {
     if (-not (Test-Path -LiteralPath $requiredTool -PathType Leaf)) {
@@ -22,7 +39,24 @@ foreach ($requiredTool in @($cmake, $deployQt)) {
 }
 
 if (-not $SkipBuild) {
-    & $cmake --preset $preset
+    $configureArguments = @('--preset', $preset)
+    $cachePath = Join-Path $buildDirectory 'CMakeCache.txt'
+    if (Test-Path -LiteralPath $cachePath -PathType Leaf) {
+        $cachedSource = Get-CMakeCacheValue `
+            $cachePath 'CMAKE_HOME_DIRECTORY:INTERNAL'
+        $cachedBuild = Get-CMakeCacheValue `
+            $cachePath 'CMAKE_CACHEFILE_DIR:INTERNAL'
+        $sourceWasRelocated = (Get-NormalizedPath $cachedSource) -ne `
+            (Get-NormalizedPath $projectRoot)
+        $buildWasRelocated = (Get-NormalizedPath $cachedBuild) -ne `
+            (Get-NormalizedPath $buildDirectory)
+        if ($sourceWasRelocated -or $buildWasRelocated) {
+            Write-Host 'Refreshing CMake cache after repository relocation.'
+            $configureArguments = @('--fresh', '--preset', $preset)
+        }
+    }
+
+    & $cmake @configureArguments
     if ($LASTEXITCODE -ne 0) {
         throw "The Windows preview configure failed with exit code $LASTEXITCODE."
     }
