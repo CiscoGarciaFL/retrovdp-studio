@@ -4577,6 +4577,65 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                 "Tabbed view should populate Source and every available mode while disabling the Mode menu");
 }
 
+void testTargetSupportDeliverables(TestContext& test)
+{
+    const QDir projectRoot(QDir(QStringLiteral(RETROVDP_QML_DIR))
+                               .absoluteFilePath(QStringLiteral("../..")));
+    const QString catalogPath = projectRoot.filePath(
+        QStringLiteral("data/target-support/targets.json"));
+    QFile catalogFile(catalogPath);
+    test.expect(catalogFile.open(QIODevice::ReadOnly),
+                "target support catalog should be shipped with the project");
+    if (!catalogFile.isOpen()) return;
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(
+        catalogFile.readAll(), &parseError);
+    test.expect(parseError.error == QJsonParseError::NoError
+                    && document.isObject(),
+                "target support catalog should be valid JSON");
+    if (!document.isObject()) return;
+
+    const QJsonObject root = document.object();
+    const QJsonArray targets = root.value(QStringLiteral("targets")).toArray();
+    int imageCount = 0;
+    bool complete = root.value(QStringLiteral("schema")).toString()
+                        == QStringLiteral("retrovdp.target-support/v1")
+        && targets.size() == 12;
+    for (const QJsonValue& targetValue : targets) {
+        const QJsonObject target = targetValue.toObject();
+        const QJsonObject workspaces = target.value(
+            QStringLiteral("workspaces")).toObject();
+        complete = complete
+            && !target.value(QStringLiteral("id")).toString().isEmpty()
+            && !target.value(QStringLiteral("name")).toString().isEmpty()
+            && !target.value(QStringLiteral("hardware")).toString().isEmpty()
+            && !target.value(QStringLiteral("modes")).toArray().isEmpty()
+            && !workspaces.value(QStringLiteral("screenImage")).toString().isEmpty()
+            && !workspaces.value(QStringLiteral("character")).toString().isEmpty()
+            && !workspaces.value(QStringLiteral("sprite")).toString().isEmpty();
+
+        const QJsonArray images = target.value(QStringLiteral("images")).toArray();
+        complete = complete && !images.isEmpty();
+        for (const QJsonValue& imageValue : images) {
+            ++imageCount;
+            const QJsonObject imageEntry = imageValue.toObject();
+            const QString local = imageEntry.value(QStringLiteral("local")).toString();
+            const QString imagePath = projectRoot.filePath(
+                QStringLiteral("app/") + local);
+            const QImage image(imagePath);
+            complete = complete && !local.isEmpty() && !image.isNull()
+                && image.width() > 0 && image.height() > 0
+                && QUrl(imageEntry.value(QStringLiteral("url")).toString()).isValid()
+                && QUrl(imageEntry.value(QStringLiteral("sourcePage")).toString()).isValid()
+                && !imageEntry.value(QStringLiteral("license")).toString().isEmpty()
+                && !imageEntry.value(QStringLiteral("credit")).toString().isEmpty();
+        }
+    }
+    test.expect(complete && imageCount == 19,
+                "all target summaries and 19 bundled offline photographs should be complete and decodable");
+}
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -4603,6 +4662,7 @@ int main(int argc, char** argv)
     testLiveWorkflow(test, controller);
     testExportWorkflow(test, controller);
     testEditorProjectRecipe(test);
+    testTargetSupportDeliverables(test);
     testResponsiveQml(test, controller);
     qInstallMessageHandler(previousMessageHandler);
     test.expect(qmlBindingErrors.load() == 0,

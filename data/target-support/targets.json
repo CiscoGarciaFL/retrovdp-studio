@@ -1,7 +1,7 @@
 {
   "schema": "retrovdp.target-support/v1",
   "title": "RetroVDP Studio target support catalog",
-  "imagePolicy": "Real product photography; remote thumbnails are sourced from the linked page and retain that page's license/attribution terms.",
+  "imagePolicy": "Bundled real-product photography for offline use; each image retains its original URL, source page, license, and credit metadata.",
   "targets": [
     {
       "id": "tms9918a", "name": "TMS9918A", "kind": "VDP", "status": "implemented",
