@@ -25,6 +25,8 @@ add_library(retrovdp_app_support STATIC
     MediaBatchConversion.hpp
     MediaBatchController.cpp
     MediaBatchController.hpp
+    TargetSupportCatalog.cpp
+    TargetSupportCatalog.hpp
 )
 
 # Keep Qt's autogen subprocess count conservative on Windows developer hosts.
