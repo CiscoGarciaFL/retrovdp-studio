@@ -1327,6 +1327,19 @@ void testApplicationPreferences(TestContext& test, ImageInputController& control
 
 void testEditorProjectRecipe(TestContext& test)
 {
+    ImageInputController startupImage;
+    startupImage.setAutoUpdate(false);
+    startupImage.setTargetProfile(static_cast<int>(
+        retrovdp::core::TargetProfileId::SegaGenesis));
+    EditorProjectController startupProject(&startupImage);
+    const QVariantList startupTargets = startupProject.supportedTargets();
+    test.expect(startupProject.activeTarget()
+                        == static_cast<int>(retrovdp::core::TargetProfileId::Tms9918A)
+                    && startupTargets.size() == 2
+                    && startupTargets.at(0).toMap().value(QStringLiteral("id")).toString()
+                        == QStringLiteral("tms9918a"),
+                "a new project should replace a restored target outside its selected target set with a valid default");
+
     ImageInputController fixtureImage;
     fixtureImage.setAutoUpdate(false);
     EditorProjectController fixtureProject(&fixtureImage);
@@ -2581,6 +2594,9 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                         == editorProject.projectName()
                     && activeTargetCombo != nullptr
                     && activeTargetCombo->property("count").toInt() == 2
+                    && activeTargetCombo->property("currentIndex").toInt() >= 0
+                    && activeTargetCombo->property("currentValue").toInt()
+                        == editorProject.activeTarget()
                     && projectBar->property("height").toReal()
                         <= activeTargetCombo->property("implicitHeight").toReal() + 10.0
                     && projectBarContent != nullptr
@@ -2653,6 +2669,16 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && vicProjectTarget->property("text").toString()
                         == QStringLiteral("MOS VIC (VIC-20)"),
                 "implemented project targets should be enabled and omit roadmap status text");
+    const bool reducedProjectToOneTarget = f18aProjectTarget != nullptr
+        && QMetaObject::invokeMethod(f18aProjectTarget, "click")
+        && waitFor([&] {
+            return tmsProjectTarget != nullptr
+                && tmsProjectTarget->property("checked").toBool()
+                && !tmsProjectTarget->property("enabled").toBool()
+                && !f18aProjectTarget->property("checked").toBool();
+        });
+    test.expect(reducedProjectToOneTarget,
+                "Project Settings should prevent the final selected target from being unchecked");
     if (projectDialog != nullptr) QMetaObject::invokeMethod(projectDialog, "close");
     QObject* supportedTargetsAction = window->findChild<QObject*>(
         QStringLiteral("supportedTargetsAction"));
@@ -4615,6 +4641,10 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                 }),
                 "Tabbed view should populate Source and every available mode while disabling the Mode menu");
 
+    editorProject.configureProjectWithTargets(
+        QStringLiteral("Genesis Sprite UI"), true, false,
+        QStringList{QStringLiteral("sega-genesis-vdp")});
+
     // Instantiate the image-heavy catalog after the workspace lifecycle checks so
     // its delegates cannot contend with workspace delegate incubation on slower CI
     // renderers. The production dialog remains immediate when the user opens it.
@@ -4628,6 +4658,23 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
         });
     test.expect(supportedTargetsOpened && targetSupportVisible,
                 "Help should open the categorized Supported Targets catalog");
+    const QColor selectedTargetPanelColor = targetSupportDialog != nullptr
+        ? targetSupportDialog->property("selectedTargetPanelColor").value<QColor>()
+        : QColor{};
+    const QColor activeTargetBorderColor = targetSupportDialog != nullptr
+        ? targetSupportDialog->property("activeTargetBorderColor").value<QColor>()
+        : QColor{};
+    test.expect(targetSupportDialog != nullptr
+                    && targetSupportDialog->property("activeTargetId").toString()
+                        == editorProject.activeTargetInfo()
+                               .value(QStringLiteral("id")).toString()
+                    && targetSupportDialog->property("activeTargetInCatalog").toBool()
+                    && targetSupportDialog->property(
+                           "selectedCatalogTargetCount").toInt() == 2
+                    && selectedTargetPanelColor.isValid()
+                    && qAbs(selectedTargetPanelColor.alphaF() - 0.32) <= 0.01
+                    && activeTargetBorderColor == QColor(Qt::white),
+                "Supported Targets should tint every selected project target and outline the active target in white");
     if (targetSupportDialog != nullptr)
         QMetaObject::invokeMethod(targetSupportDialog, "close");
 }
