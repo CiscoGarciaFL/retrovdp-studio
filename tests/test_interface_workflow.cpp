@@ -2589,14 +2589,21 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
     QObject* activeTargetCombo = window->findChild<QObject*>(QStringLiteral("activeTargetCombo"));
     QObject* projectSettingsAction = window->findChild<QObject*>(
         QStringLiteral("projectSettingsAction"));
+    const bool activeTargetComboSynchronized = activeTargetCombo != nullptr
+        && waitFor([&] {
+               return activeTargetCombo->property("currentIndex").toInt() >= 0
+                   && activeTargetCombo->property("currentValue").toInt()
+                       == editorProject.activeTarget()
+                   && activeTargetCombo->property("currentText").toString()
+                       == editorProject.activeTargetInfo()
+                              .value(QStringLiteral("name")).toString();
+           });
     test.expect(projectBar != nullptr && projectBarName != nullptr
                     && projectBarName->property("text").toString()
                         == editorProject.projectName()
                     && activeTargetCombo != nullptr
                     && activeTargetCombo->property("count").toInt() == 2
-                    && activeTargetCombo->property("currentIndex").toInt() >= 0
-                    && activeTargetCombo->property("currentValue").toInt()
-                        == editorProject.activeTarget()
+                    && activeTargetComboSynchronized
                     && projectBar->property("height").toReal()
                         <= activeTargetCombo->property("implicitHeight").toReal() + 10.0
                     && projectBarContent != nullptr

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24)
 # This is the single release-version source. CMake's project() command accepts
 # only the numeric core, so keep the complete semantic version here and derive
 # PROJECT_VERSION from it.
-set(RETROVDP_VERSION "0.1.0-beta.11")
+set(RETROVDP_VERSION "0.1.0-beta.12")
 if(NOT RETROVDP_VERSION MATCHES
         "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-[0-9A-Za-z.-]+)?$")
     message(FATAL_ERROR
