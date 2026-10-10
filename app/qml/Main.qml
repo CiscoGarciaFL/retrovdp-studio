@@ -604,7 +604,8 @@ ApplicationWindow {
                     model: editorProject.supportedTargets
                     textRole: "name"
                     valueRole: "value"
-                    currentIndex: indexOfValue(editorProject.activeTarget)
+                    currentIndex: count > 0
+                        ? indexOfValue(editorProject.activeTarget) : -1
                     onActivated: editorProject.activeTarget = currentValue
                     Accessible.name: qsTr("Active project target")
                 }
