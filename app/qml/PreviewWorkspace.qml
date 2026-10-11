@@ -17,8 +17,10 @@ Item {
     readonly property string destinationTitle: workspaceMode === 1
                                                ? qsTr("Character Editor")
                                                : workspaceMode === 2
-                                                 ? qsTr("Sprite Editor")
-                                                 : qsTr("Screen Image")
+                                                 ? (editorProject.activeTargetInfo.objectProcessor
+                                                    ? qsTr("Object Editor") : qsTr("Sprite Editor"))
+                                                 : (editorProject.activeTargetInfo.objectProcessor
+                                                    ? qsTr("Object Scene") : qsTr("Screen Image"))
 
     component SourcePane: PreviewPane {
         objectName: "sourcePreview"
@@ -38,12 +40,15 @@ Item {
 
     component ScreenImagePane: PreviewPane {
         objectName: "convertedPreview"
-        title: qsTr("Screen Image")
+        title: editorProject.activeTargetInfo.objectProcessor
+               ? qsTr("Object Scene") : qsTr("Screen Image")
         imageSource: imageInput.convertedPreview
         pixelAspectRatio: imageInput.targetPixelAspectRatio
         details: imageInput.conversionDetails
         emptyText: imageInput.hasImage
-                   ? qsTr("The screen image will appear here")
+                   ? (editorProject.activeTargetInfo.objectProcessor
+                      ? qsTr("The converted object scene will appear here")
+                      : qsTr("The screen image will appear here"))
                    : qsTr("Open a source image to begin")
         busy: imageInput.busy
         screenImageTools: true
@@ -58,7 +63,7 @@ Item {
     component CharacterEditorPane: EditorWorkspacePlaceholder {
         objectName: "characterEditorWorkspace"
         title: qsTr("Character Editor")
-        description: qsTr("Create and edit character patterns under the active target VDP's rules.")
+        description: qsTr("Create and edit character patterns under the active target's rules.")
         importDescription: qsTr("Extract a character-aligned Screen Image region into the active pattern set, then inspect its arrangement with Pattern Previewer.")
         editorKind: 0
         showTitle: root.layoutMode !== 0
@@ -66,9 +71,14 @@ Item {
 
     component SpriteEditorPane: EditorWorkspacePlaceholder {
         objectName: "spriteEditorWorkspace"
-        title: qsTr("Sprite Editor")
-        description: qsTr("Create and edit sprite patterns under the active target VDP's rules.")
-        importDescription: qsTr("Screen Image selection, scaling, transparency, color reduction, and palette fitting will feed this editor.")
+        title: editorProject.activeTargetInfo.objectProcessor
+               ? qsTr("Object Editor") : qsTr("Sprite Editor")
+        description: editorProject.activeTargetInfo.objectProcessor
+                     ? qsTr("Create, size, link, and place objects under the active processor's rules.")
+                     : qsTr("Create and edit sprite patterns under the active target's rules.")
+        importDescription: editorProject.activeTargetInfo.objectProcessor
+                           ? qsTr("The object scene keeps pattern data, per-object dimensions, palette selection, attributes, and placement together.")
+                           : qsTr("Screen Image selection, scaling, transparency, color reduction, and palette fitting will feed this editor.")
         editorKind: 1
         showTitle: root.layoutMode !== 0
     }
@@ -121,9 +131,12 @@ Item {
                 }
                 TabButton {
                     objectName: "convertedPreviewTab"
-                    text: qsTr("Screen Image")
+                    text: editorProject.activeTargetInfo.objectProcessor
+                          ? qsTr("Object Scene") : qsTr("Screen Image")
                     enabled: root.screenImageModeAvailable
-                    Accessible.name: qsTr("Show Screen Image mode")
+                    Accessible.name: editorProject.activeTargetInfo.objectProcessor
+                                     ? qsTr("Show Object Scene mode")
+                                     : qsTr("Show Screen Image mode")
                     onClicked: {
                         root.modeRequested(0)
                         root.editingSurfaceActivated(true)
@@ -138,9 +151,12 @@ Item {
                 }
                 TabButton {
                     objectName: "spriteEditorTab"
-                    text: qsTr("Sprite Editor")
+                    text: editorProject.activeTargetInfo.objectProcessor
+                          ? qsTr("Object Editor") : qsTr("Sprite Editor")
                     enabled: root.spriteModeAvailable
-                    Accessible.name: qsTr("Show Sprite Editor mode")
+                    Accessible.name: editorProject.activeTargetInfo.objectProcessor
+                                     ? qsTr("Show Object Editor mode")
+                                     : qsTr("Show Sprite Editor mode")
                     onClicked: root.modeRequested(2)
                 }
             }

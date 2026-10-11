@@ -159,6 +159,24 @@ constexpr std::array superNesMode3BackgroundTables{
     TargetTableLayout{TargetTableRole::Palette, 512U},
     TargetTableLayout{TargetTableRole::DisplayRegisters, 64U},
 };
+constexpr std::array atariLynxObjectSceneTables{
+    TargetTableLayout{TargetTableRole::Pattern, 8263U},
+    TargetTableLayout{TargetTableRole::ObjectAttributes, 23U},
+    TargetTableLayout{TargetTableRole::Palette, 32U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array neoGeoFixLayerTables{
+    TargetTableLayout{TargetTableRole::Pattern, 128U * 1024U},
+    TargetTableLayout{TargetTableRole::TileMap, 8192U},
+    TargetTableLayout{TargetTableRole::Palette, 8192U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array neoGeoChainedSpriteTables{
+    TargetTableLayout{TargetTableRole::Pattern, 20U * 14U * 128U},
+    TargetTableLayout{TargetTableRole::ObjectAttributes, 0x8600U * 2U},
+    TargetTableLayout{TargetTableRole::Palette, 8192U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
 
 void setPaletteError(PaletteError* destination, PaletteError error)
 {
@@ -283,6 +301,9 @@ std::span<const TargetTableLayout> expectedTargetTables(ConversionMode mode)
     case ConversionMode::SuperNesMode0Background: return superNesMode0BackgroundTables;
     case ConversionMode::SuperNesMode1Background: return superNesMode1BackgroundTables;
     case ConversionMode::SuperNesMode3Background: return superNesMode3BackgroundTables;
+    case ConversionMode::AtariLynxObjectScene: return atariLynxObjectSceneTables;
+    case ConversionMode::NeoGeoFixLayer: return neoGeoFixLayerTables;
+    case ConversionMode::NeoGeoChainedSprites: return neoGeoChainedSpriteTables;
     }
     return {};
 }

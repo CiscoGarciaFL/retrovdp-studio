@@ -127,6 +127,13 @@ bool isNintendoPpuMode(ConversionMode mode)
         || mode == ConversionMode::SuperNesMode3Background;
 }
 
+bool isObjectProcessorMode(ConversionMode mode)
+{
+    return mode == ConversionMode::AtariLynxObjectScene
+        || mode == ConversionMode::NeoGeoFixLayer
+        || mode == ConversionMode::NeoGeoChainedSprites;
+}
+
 const TargetMemoryTable* table(const TargetMemoryImage& image, TargetTableRole role)
 {
     const auto found = std::ranges::find(image.tables, role, &TargetMemoryTable::role);
@@ -319,6 +326,23 @@ GeneratedFileManifest tableFiles(const ExportRequest& request)
                            ? ".CGRAM" : ".PAL");
             else if (source.role == TargetTableRole::DisplayRegisters)
                 fileName = upperBase + ".REG";
+        } else if (request.format == ExportFormat::Raw
+                   && isObjectProcessorMode(request.target->mode)) {
+            if (source.role == TargetTableRole::Pattern) {
+                fileName = upperBase
+                    + (request.target->mode == ConversionMode::NeoGeoFixLayer
+                           ? ".FIX" : ".SPR");
+            } else if (source.role == TargetTableRole::TileMap) {
+                fileName = upperBase + ".FIXMAP";
+            } else if (source.role == TargetTableRole::ObjectAttributes) {
+                fileName = upperBase
+                    + (request.target->mode == ConversionMode::AtariLynxObjectScene
+                           ? ".SCB" : ".VRAM");
+            } else if (source.role == TargetTableRole::Palette) {
+                fileName = upperBase + ".PAL";
+            } else if (source.role == TargetTableRole::DisplayRegisters) {
+                fileName = upperBase + ".REG";
+            }
         }
         GeneratedFile file{std::move(fileName), {}};
         rawTotal += source.bytes.size();

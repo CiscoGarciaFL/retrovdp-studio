@@ -84,12 +84,19 @@ ColumnLayout {
                     .arg(root.info.characterMapRows || 0)
         }
 
-        Label { visible: root.detailKind === 2; text: qsTr("Pattern sizes") }
+        Label {
+            visible: root.detailKind === 2
+            text: root.info.objectProcessor ? qsTr("Object dimensions") : qsTr("Pattern sizes")
+        }
         Label {
             visible: root.detailKind === 2
             Layout.fillWidth: true
             text: root.info.id === "sega-sms-vdp"
                   ? qsTr("8×8 and 8×16")
+                  : root.info.id === "atari-lynx"
+                  ? qsTr("8/16/32/64 pixels per axis")
+                  : root.info.id === "neo-geo"
+                  ? qsTr("16×16 through 16×512 strips")
                   : root.info.spriteMinimumSize === root.info.spriteMaximumSize
                   ? qsTr("%1×%1").arg(root.info.spriteMinimumSize || 0)
                   : qsTr("%1×%1 and %2×%2")
@@ -102,7 +109,8 @@ ColumnLayout {
             visible: root.detailKind === 2
             Layout.fillWidth: true
             text: root.info.spritePerItemSize
-                  ? qsTr("Per sprite") : qsTr("Global for target")
+                  ? (root.info.objectProcessor ? qsTr("Per object") : qsTr("Per sprite"))
+                  : qsTr("Global for target")
         }
 
         Label { visible: root.detailKind === 2; text: qsTr("Color depth") }

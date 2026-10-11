@@ -6,6 +6,7 @@
 #include "retrovdp/core/HuC6270Converter.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
 #include "retrovdp/core/NintendoPpuConverter.hpp"
+#include "retrovdp/core/ObjectProcessorConverter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/SegaSmsVdpConverter.hpp"
 #include "retrovdp/core/SegaGenesisVdpConverter.hpp"
@@ -44,6 +45,12 @@ ConversionResult compileRegisteredConversion(const RgbImage& source,
 
     ConversionResult result;
     switch (settings.mode) {
+    case ConversionMode::AtariLynxObjectScene:
+    case ConversionMode::NeoGeoFixLayer:
+    case ConversionMode::NeoGeoChainedSprites:
+        result = convertObjectProcessor(source, settings, cancellation,
+                                        std::move(progress));
+        break;
     case ConversionMode::GameBoyBackground:
     case ConversionMode::GameBoyColorBackground:
     case ConversionMode::SuperNesMode0Background:

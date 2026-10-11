@@ -4,16 +4,16 @@
   <img src="app/assets/RetroVDPStudio.svg" width="220" alt="RetroVDP Studio logo">
 </p>
 
-RetroVDP Studio is a cross-platform graphics workspace for classic video
-display processors. It combines source preparation and conversion with
-hardware-aware screen, character, pattern, palette, and sprite tools.
+RetroVDP Studio is a cross-platform graphics workspace for classic video and
+object processors. It combines source preparation and conversion with
+hardware-aware screen, object, character, pattern, palette, and sprite tools.
 
 The application is organized around three independent ideas:
 
 1. **Sources are reusable.** Common images and supported retro formats can be
    opened as source material without being restricted to the hardware or
    software that originally created them.
-2. **Targets own their output.** Each selected VDP profile applies its own
+2. **Targets own their output.** Each selected hardware profile applies its own
    display modes, palettes, memory organization, sprite limits, validation,
    and export formats. A future project may retain several managed target
    outputs derived from the same source.
@@ -26,7 +26,8 @@ The application is organized around three independent ideas:
 
 The current release implements TMS9918A, F18A, V9938, V9958, Sega Master
 System, Sega Genesis/Mega Drive, NEC/Hudson HuC6270, MOS VIC-II, MOS VIC,
-Nintendo Game Boy, Nintendo Game Boy Color, and Super NES conversion profiles.
+Nintendo Game Boy, Nintendo Game Boy Color, Super NES, Atari Lynx Suzy/Mikey,
+and SNK Neo Geo conversion profiles.
 V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
 compiled through the registered Yamaha bitmap strategies, including
 programmable palette and YJK/YAE output. The Master System profile compiles
@@ -61,6 +62,13 @@ presets, undo/reset, palette inspection, persistent settings, export summaries,
 and accessible narrow/wide layouts. It also provides a headless command-line
 frontend for deterministic one-shot conversion and export, stable exit codes,
 JSON diagnostics, and automation-friendly overwrite handling.
+
+Object-processor support is object-first: Atari Lynx converts 160×102 scenes to
+4bpp literal line data and linked SCBs, while Neo Geo converts either the
+320×224 FIX layer or chained 16-pixel object strips. Their editor surfaces use
+Object Scene/Object Editor language and export native `.SCB`/`.SPR` or
+`.VRAM`/`.SPR` data together with palettes, FIX assets where applicable, and
+register metadata. See [`docs/OBJECT_PROCESSOR_TARGETS.md`](docs/OBJECT_PROCESSOR_TARGETS.md).
 
 The current roadmap is [`PROJECT_PLAN.md`](PROJECT_PLAN.md). The audited target
 architecture and its incremental migration are in

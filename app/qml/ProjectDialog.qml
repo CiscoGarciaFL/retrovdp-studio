@@ -57,7 +57,8 @@ Dialog {
         const controls = [tms9918aTarget, f18aTarget, v9938Target, v9958Target,
                           segaSmsTarget, segaGenesisTarget, huc6270Target,
                           vicIiTarget, vicTarget, gameBoyTarget,
-                          gameBoyColorTarget, superNesTarget]
+                          gameBoyColorTarget, superNesTarget,
+                          atariLynxTarget, neoGeoTarget]
         let count = 0
         for (let index = 0; index < controls.length; ++index) {
             if (controls[index].checked)
@@ -93,6 +94,8 @@ Dialog {
         gameBoyTarget.checked = editorProject.gameBoyEnabled
         gameBoyColorTarget.checked = editorProject.gameBoyColorEnabled
         superNesTarget.checked = editorProject.superNesEnabled
+        atariLynxTarget.checked = editorProject.atariLynxEnabled
+        neoGeoTarget.checked = editorProject.neoGeoEnabled
         open()
         projectNameField.forceActiveFocus()
     }
@@ -235,14 +238,14 @@ Dialog {
             CheckBox {
                 id: atariLynxTarget
                 objectName: "atariLynxProjectTarget"
-                text: qsTr("Atari Lynx Suzy / Mikey — Planned")
-                enabled: false
+                text: qsTr("Atari Lynx Suzy / Mikey")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: neoGeoTarget
                 objectName: "neoGeoProjectTarget"
-                text: qsTr("SNK Neo Geo — Research")
-                enabled: false
+                text: qsTr("SNK Neo Geo")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
 
             Label {

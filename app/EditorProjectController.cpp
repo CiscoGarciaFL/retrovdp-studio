@@ -58,6 +58,8 @@ QString previewName(int target)
     case 9: return QStringLiteral("game-boy-ppu");
     case 10: return QStringLiteral("game-boy-color-ppu");
     case 11: return QStringLiteral("super-nes-ppu");
+    case 12: return QStringLiteral("atari-lynx");
+    case 13: return QStringLiteral("neo-geo");
     default: return QStringLiteral("tms9918a");
     }
 }
@@ -153,6 +155,8 @@ QVariantList EditorProjectController::supportedTargets() const
     if (gameBoyEnabled_) append(retrovdp::core::TargetProfileId::GameBoy);
     if (gameBoyColorEnabled_) append(retrovdp::core::TargetProfileId::GameBoyColor);
     if (superNesEnabled_) append(retrovdp::core::TargetProfileId::SuperNes);
+    if (atariLynxEnabled_) append(retrovdp::core::TargetProfileId::AtariLynx);
+    if (neoGeoEnabled_) append(retrovdp::core::TargetProfileId::NeoGeo);
     return result;
 }
 
@@ -190,6 +194,14 @@ QVariantMap EditorProjectController::activeTargetInfo() const
             spriteSizes.push_back(2421);
         } else if (usesSuperNesEditor()) {
             for (const int size : {8, 16, 32, 64}) spriteSizes.push_back(size);
+        } else if (usesAtariLynxEditor()) {
+            for (const int height : {8, 16, 32, 64}) {
+                for (const int width : {8, 16, 32, 64})
+                    spriteSizes.push_back(width * 100 + height);
+            }
+        } else if (usesNeoGeoEditor()) {
+            for (const int height : {16, 32, 64, 128, 256, 512})
+                spriteSizes.push_back(height);
         } else {
             spriteSizes.push_back(static_cast<int>(profile.sprites.minimumPixelSize));
             if (profile.sprites.maximumPixelSize != profile.sprites.minimumPixelSize)
@@ -200,6 +212,18 @@ QVariantMap EditorProjectController::activeTargetInfo() const
     return {
         {QStringLiteral("name"), QString::fromLatin1(profile.displayName)},
         {QStringLiteral("id"), QString::fromStdString(profile.stableId.value())},
+        {QStringLiteral("objectProcessor"),
+         profile.kind == retrovdp::core::TargetKind::ObjectProcessor},
+        {QStringLiteral("objectScaling"),
+         has(retrovdp::core::TargetCapability::ObjectScaling)},
+        {QStringLiteral("objectChaining"),
+         has(retrovdp::core::TargetCapability::ObjectChaining)},
+        {QStringLiteral("targetKind"),
+         profile.kind == retrovdp::core::TargetKind::ObjectProcessor
+             ? QStringLiteral("Object processor")
+         : profile.kind == retrovdp::core::TargetKind::PictureProcessor
+             ? QStringLiteral("Picture processor")
+             : QStringLiteral("Video display processor")},
         {QStringLiteral("implemented"),
          profile.status == retrovdp::core::TargetProfileStatus::Implemented},
         {QStringLiteral("vramKiB"), static_cast<int>(profile.nominalVramBytes / 1024U)},
@@ -233,13 +257,15 @@ QVariantMap EditorProjectController::activeTargetInfo() const
          : usesGameBoyEditor() ? QStringLiteral("Game Boy 2-plane tiles")
          : usesGameBoyColorEditor() ? QStringLiteral("Game Boy Color banked 2-plane tiles")
          : usesSuperNesEditor() ? QStringLiteral("Super NES mode-selected planar tiles")
+         : usesNeoGeoEditor() ? QStringLiteral("Neo Geo 8x8 FIX-layer characters")
          : activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::Vic)
              ? QStringLiteral("VIC high-resolution and multicolor characters")
              : QStringLiteral("Target-compatible patterns")},
         {QStringLiteral("characterPaletteBankCount"),
          usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16
+         : (usesNeoGeoEditor() ? 16
          : (usesGameBoyColorEditor() ? 8
-         : (usesSuperNesEditor() && activeCharacterColorDepth() < 8 ? 8 : 1)))},
+         : (usesSuperNesEditor() && activeCharacterColorDepth() < 8 ? 8 : 1))))},
         {QStringLiteral("sprites"),
          has(retrovdp::core::TargetCapability::Sprites)},
         {QStringLiteral("spriteSizes"), spriteSizes},
@@ -250,7 +276,7 @@ QVariantMap EditorProjectController::activeTargetInfo() const
         {QStringLiteral("spritePatternsPerSet"),
          spritePatternsPerSet()},
         {QStringLiteral("spriteMaximumVisible"),
-         spritePatternsPerSet()},
+         static_cast<int>(profile.sprites.maximumVisibleSprites)},
         {QStringLiteral("spriteMaximumColorDepth"),
          static_cast<int>(profile.sprites.maximumColorDepth)},
         {QStringLiteral("spriteUsesGlobalSize"), profile.sprites.usesGlobalSize},
@@ -270,20 +296,27 @@ QVariantMap EditorProjectController::activeTargetInfo() const
                  ? QStringLiteral("Game Boy Color OAM; global 8x8 or 8x16, color OBJ palettes")
              : usesSuperNesEditor()
                  ? QStringLiteral("Super NES OAM; selected small/large size pair, 4bpp OBJ palettes")
+             : usesAtariLynxEditor()
+                 ? QStringLiteral("Suzy objects; variable dimensions, 4bpp pen maps, scaling and linked SCBs")
+             : usesNeoGeoEditor()
+                 ? QStringLiteral("Neo Geo objects; chained 16-pixel strips, 4bpp tiles and shrink controls")
              : QStringLiteral("Target-compatible sprites")},
         {QStringLiteral("spriteMaximumPerScanline"),
-         usesSmsMode4Editor() ? 8 : (usesGenesisMode5Editor()
-             ? (imageInput_->targetWidth() == 320 ? 20 : 16)
-             : (usesHuC6270Editor() ? 16 : (usesVicIIEditor() ? 8
-             : (usesGameBoyEditor() || usesGameBoyColorEditor() ? 10
-             : (usesSuperNesEditor() ? 32 : 0)))))},
+         usesSmsMode4Editor() ? 8 : usesGenesisMode5Editor()
+              ? (imageInput_->targetWidth() == 320 ? 20 : 16)
+              : usesHuC6270Editor() ? 16 : usesVicIIEditor() ? 8
+              : (usesGameBoyEditor() || usesGameBoyColorEditor()) ? 10
+              : usesSuperNesEditor() ? 32 : usesNeoGeoEditor() ? 96
+              : usesAtariLynxEditor() ? 128 : 0},
         {QStringLiteral("spriteSupportsFlipAttributes"),
          usesGenesisMode5Editor() || usesHuC6270Editor()
-             || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor()},
+              || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor()
+              || usesNeoGeoEditor()},
         {QStringLiteral("spritePaletteBankCount"),
          usesGenesisMode5Editor() ? 4 : (usesHuC6270Editor() ? 16
+         : (usesNeoGeoEditor() ? 256
          : (usesGameBoyEditor() ? 2
-         : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 8 : 1)))},
+         : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 8 : 1))))},
     };
 }
 
@@ -321,7 +354,8 @@ bool EditorProjectController::targetEnabled(int value) const
         || (value == 4 && segaSmsEnabled_) || (value == 5 && segaGenesisEnabled_)
         || (value == 6 && huc6270Enabled_) || (value == 7 && vicIiEnabled_)
         || (value == 8 && vicEnabled_) || (value == 9 && gameBoyEnabled_)
-        || (value == 10 && gameBoyColorEnabled_) || (value == 11 && superNesEnabled_);
+        || (value == 10 && gameBoyColorEnabled_) || (value == 11 && superNesEnabled_)
+        || (value == 12 && atariLynxEnabled_) || (value == 13 && neoGeoEnabled_);
 }
 
 void EditorProjectController::setProjectName(const QString& value)
@@ -391,16 +425,27 @@ bool EditorProjectController::usesSuperNesEditor() const
     return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::SuperNes);
 }
 
+bool EditorProjectController::usesAtariLynxEditor() const
+{
+    return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::AtariLynx);
+}
+
+bool EditorProjectController::usesNeoGeoEditor() const
+{
+    return activeTarget() == static_cast<int>(retrovdp::core::TargetProfileId::NeoGeo);
+}
+
 bool EditorProjectController::usesCompoundSpriteEditor() const
 {
     return usesGenesisMode5Editor() || usesHuC6270Editor() || usesVicIIEditor()
-        || usesSuperNesEditor();
+        || usesSuperNesEditor() || usesAtariLynxEditor() || usesNeoGeoEditor();
 }
 
 bool EditorProjectController::usesIndexed4BppEditor() const
 {
     return usesSmsMode4Editor() || usesGenesisMode5Editor() || usesHuC6270Editor()
-        || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor();
+        || usesGameBoyEditor() || usesGameBoyColorEditor() || usesSuperNesEditor()
+        || usesAtariLynxEditor() || usesNeoGeoEditor();
 }
 
 bool EditorProjectController::usesIndexedSpriteEditor() const
@@ -457,7 +502,7 @@ QVariantList EditorProjectController::characterPaletteColors() const
         }
         return fallback;
     }
-    if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
+    if (usesGenesisMode5Editor() || usesHuC6270Editor() || usesNeoGeoEditor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = characterPaletteBank_ * 16;
         if (palette.size() >= start + 16) return palette.mid(start, 16);
@@ -554,7 +599,12 @@ QVariantList EditorProjectController::spritePaletteColors() const
         }
         return fallback;
     }
-    if (usesGenesisMode5Editor() || usesHuC6270Editor()) {
+    if (usesAtariLynxEditor()) {
+        const QVariantList palette = imageInput_->paletteColors();
+        if (palette.size() >= 16) return palette.mid(0, 16);
+        return characterPaletteColors();
+    }
+    if (usesGenesisMode5Editor() || usesHuC6270Editor() || usesNeoGeoEditor()) {
         const QVariantList palette = imageInput_->paletteColors();
         const int start = activeSpritePaletteBank() * 16;
         if (palette.size() >= start + 16) return palette.mid(start, 16);
@@ -590,9 +640,10 @@ void EditorProjectController::setCharacterPaletteBank(int value)
 {
     value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
                               : (usesHuC6270Editor() ? 15
+                              : (usesNeoGeoEditor() ? 15
                               : (usesGameBoyColorEditor()
                               || (usesSuperNesEditor() && activeCharacterColorDepth() < 8)
-                                  ? 7 : 0)));
+                                  ? 7 : 0))));
     if (characterPaletteBank_ == value) return;
     characterPaletteBank_ = value;
     ++characterRevision_;
@@ -830,6 +881,10 @@ QVariantList EditorProjectController::activeSpritePlacements() const
                                       (usesGenesisMode5Editor() || usesGameBoyEditor()
                                        || usesGameBoyColorEditor() || usesSuperNesEditor())
                                           && placement.priority},
+                                     {QStringLiteral("horizontalScale"), placement.horizontalScale},
+                                     {QStringLiteral("verticalScale"), placement.verticalScale},
+                                     {QStringLiteral("chained"),
+                                      usesNeoGeoEditor() && placement.chained},
                                      {QStringLiteral("profile"),
                                       usesSmsMode4Editor()
                                           ? QStringLiteral("sms-mode4")
@@ -989,10 +1044,13 @@ void EditorProjectController::configureProjectWithTargets(
     gameBoyEnabled_ = plannedTargetIds.contains(QStringLiteral("game-boy-ppu"));
     gameBoyColorEnabled_ = plannedTargetIds.contains(QStringLiteral("game-boy-color-ppu"));
     superNesEnabled_ = plannedTargetIds.contains(QStringLiteral("super-nes-ppu"));
+    atariLynxEnabled_ = plannedTargetIds.contains(QStringLiteral("atari-lynx"));
+    neoGeoEnabled_ = plannedTargetIds.contains(QStringLiteral("neo-geo"));
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
         && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
-        && !gameBoyColorEnabled_ && !superNesEnabled_) {
+        && !gameBoyColorEnabled_ && !superNesEnabled_ && !atariLynxEnabled_
+        && !neoGeoEnabled_) {
         tms9918aEnabled_ = true;
     }
     plannedTargetIds_.clear();
@@ -1010,6 +1068,8 @@ void EditorProjectController::configureProjectWithTargets(
             && id != QStringLiteral("game-boy-ppu")
             && id != QStringLiteral("game-boy-color-ppu")
             && id != QStringLiteral("super-nes-ppu")
+            && id != QStringLiteral("atari-lynx")
+            && id != QStringLiteral("neo-geo")
             && !plannedTargetIds_.contains(id)) {
             plannedTargetIds_.push_back(id);
         }
@@ -1020,7 +1080,7 @@ void EditorProjectController::configureProjectWithTargets(
     }
     if (!targetEnabled(activeTarget())) {
         int fallback = 0;
-        for (int candidate = 0; candidate <= 11; ++candidate) {
+        for (int candidate = 0; candidate <= 13; ++candidate) {
             if (targetEnabled(candidate)) {
                 fallback = candidate;
                 break;
@@ -1098,7 +1158,7 @@ void EditorProjectController::createProjectWithTargets(
 void EditorProjectController::setPreviewTarget(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(retrovdp::core::TargetProfileId::SuperNes));
+                       static_cast<int>(retrovdp::core::TargetProfileId::NeoGeo));
     if (previewTarget_ == value) return;
     previewTarget_ = value;
     emit projectChanged();
@@ -2277,7 +2337,8 @@ bool EditorProjectController::exportGenesisCharacterAssets(const QUrl& directory
     QByteArray tiles;
     tiles.reserve(characterPatternsPerSet() * 32);
     const auto& set = characterSets_[static_cast<std::size_t>(activeCharacterSet_)];
-    for (const auto& pattern : set.patterns) {
+    for (int patternIndex = 0; patternIndex < characterPatternsPerSet(); ++patternIndex) {
+        const auto& pattern = set.patterns[static_cast<std::size_t>(patternIndex)];
         for (int row = 0; row < 8; ++row) {
             const int foreground = (pattern.colors[static_cast<std::size_t>(row)] >> 4U) & 0x0f;
             const int background = pattern.colors[static_cast<std::size_t>(row)] & 0x0f;
@@ -2426,7 +2487,7 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                 {QStringLiteral("indexedPixels"), indexedPixels}});
         }
         characterSets.push_back(QJsonObject{{QStringLiteral("name"), set.name},
-                                             {QStringLiteral("capacity"), 2048},
+                                             {QStringLiteral("capacity"), 4096},
                                              {QStringLiteral("patterns"), savedPatterns}});
     }
     QJsonArray characterEditors;
@@ -2489,7 +2550,12 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                                                placement.palette},
                                               {QStringLiteral("flipX"), placement.flipX},
                                               {QStringLiteral("flipY"), placement.flipY},
-                                              {QStringLiteral("priority"), placement.priority}});
+                                              {QStringLiteral("priority"), placement.priority},
+                                              {QStringLiteral("horizontalScale"),
+                                               placement.horizontalScale},
+                                              {QStringLiteral("verticalScale"),
+                                               placement.verticalScale},
+                                              {QStringLiteral("chained"), placement.chained}});
         }
         spriteSets.push_back(QJsonObject{{QStringLiteral("name"), set.name},
                                           {QStringLiteral("capacity"), 128},
@@ -2498,7 +2564,7 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                                           {QStringLiteral("patterns16"),
                                            saveSpriteBank(set.patterns16, 256)},
                                           {QStringLiteral("patternsGenesis"),
-                                           saveSpriteBank(set.patternsGenesis, 4096)},
+                                           saveSpriteBank(set.patternsGenesis, 8192)},
                                           {QStringLiteral("placements"), placements}});
     }
     QJsonArray spriteEditors;
@@ -2525,6 +2591,8 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
     if (gameBoyColorEnabled_)
         projectTargets.push_back(QStringLiteral("game-boy-color-ppu"));
     if (superNesEnabled_) projectTargets.push_back(QStringLiteral("super-nes-ppu"));
+    if (atariLynxEnabled_) projectTargets.push_back(QStringLiteral("atari-lynx"));
+    if (neoGeoEnabled_) projectTargets.push_back(QStringLiteral("neo-geo"));
     for (const QString& targetId : plannedTargetIds_)
         projectTargets.push_back(targetId);
 
@@ -2565,7 +2633,11 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                      {QStringLiteral("game-boy-color-ppu"),
                       QJsonObject{{QStringLiteral("enabled"), gameBoyColorEnabled_}}},
                      {QStringLiteral("super-nes-ppu"),
-                      QJsonObject{{QStringLiteral("enabled"), superNesEnabled_}}}}},
+                      QJsonObject{{QStringLiteral("enabled"), superNesEnabled_}}},
+                     {QStringLiteral("atari-lynx"),
+                      QJsonObject{{QStringLiteral("enabled"), atariLynxEnabled_}}},
+                     {QStringLiteral("neo-geo"),
+                      QJsonObject{{QStringLiteral("enabled"), neoGeoEnabled_}}}}},
         {QStringLiteral("preview"), previewName(previewTarget_)},
         {QStringLiteral("editScope"), editScope_ == 1
                                              ? QStringLiteral("f18a-enhancements")
@@ -2681,6 +2753,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         gameBoyColorEnabled_ = configuredTargets.contains(
             QStringLiteral("game-boy-color-ppu"));
         superNesEnabled_ = configuredTargets.contains(QStringLiteral("super-nes-ppu"));
+        atariLynxEnabled_ = configuredTargets.contains(QStringLiteral("atari-lynx"));
+        neoGeoEnabled_ = configuredTargets.contains(QStringLiteral("neo-geo"));
         plannedTargetIds_.clear();
         for (const QJsonValue& targetValue : configuredTargets) {
             const QString targetId = targetValue.toString().trimmed();
@@ -2696,6 +2770,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 && targetId != QStringLiteral("game-boy-ppu")
                 && targetId != QStringLiteral("game-boy-color-ppu")
                 && targetId != QStringLiteral("super-nes-ppu")
+                && targetId != QStringLiteral("atari-lynx")
+                && targetId != QStringLiteral("neo-geo")
                 && !plannedTargetIds_.contains(targetId)) {
                 plannedTargetIds_.push_back(targetId);
             }
@@ -2732,15 +2808,20 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                                    .value(QStringLiteral("enabled")).toBool(false);
         superNesEnabled_ = profiles.value(QStringLiteral("super-nes-ppu")).toObject()
                               .value(QStringLiteral("enabled")).toBool(false);
+        atariLynxEnabled_ = profiles.value(QStringLiteral("atari-lynx")).toObject()
+                                .value(QStringLiteral("enabled")).toBool(false);
+        neoGeoEnabled_ = profiles.value(QStringLiteral("neo-geo")).toObject()
+                             .value(QStringLiteral("enabled")).toBool(false);
     }
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
         && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
-        && !gameBoyColorEnabled_ && !superNesEnabled_)
+        && !gameBoyColorEnabled_ && !superNesEnabled_ && !atariLynxEnabled_
+        && !neoGeoEnabled_)
         tms9918aEnabled_ = true;
     if (!targetEnabled(activeTarget())) {
         int fallbackTarget = 0;
-        for (int candidate = 0; candidate <= 11; ++candidate) {
+        for (int candidate = 0; candidate <= 13; ++candidate) {
             if (targetEnabled(candidate)) {
                 fallbackTarget = candidate;
                 break;
@@ -2767,7 +2848,10 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         character.value(QStringLiteral("backgroundColor")).toInt(1), 0, 15);
     characterPaletteBank_ = std::clamp(
         character.value(QStringLiteral("paletteBank")).toInt(), 0,
-        usesGenesisMode5Editor() ? 3 : (usesHuC6270Editor() ? 15 : 0));
+        usesGenesisMode5Editor() ? 3
+        : (usesHuC6270Editor() || usesNeoGeoEditor()) ? 15
+        : (usesGameBoyColorEditor()
+           || (usesSuperNesEditor() && activeCharacterColorDepth() < 8)) ? 7 : 0);
     activeCharacterPlane_ = std::clamp(
         character.value(QStringLiteral("activePlane")).toInt(), 0,
         usesGenesisMode5Editor() ? 2 : 0);
@@ -2821,7 +2905,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
     const int mapColumns = characterMapColumns();
     const int mapRows = characterMapRows();
     const int maximumSavedEditors = usesGenesisMode5Editor()
-        ? mapColumns * mapRows * 3 : 768;
+        ? mapColumns * mapRows * 3
+        : usesNeoGeoEditor() ? mapColumns * mapRows : 768;
     for (int index = 0;
          index < std::min(maximumSavedEditors, static_cast<int>(savedEditors.size()));
          ++index) {
@@ -2842,7 +2927,11 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
              std::clamp(savedEditor.value(QStringLiteral("plane")).toInt(), 0,
                         usesGenesisMode5Editor() ? 2 : 0),
              std::clamp(savedEditor.value(QStringLiteral("palette")).toInt(), 0,
-                        usesGenesisMode5Editor() ? 3 : 0),
+                         usesGenesisMode5Editor() ? 3
+                         : (usesHuC6270Editor() || usesNeoGeoEditor()) ? 15
+                         : (usesGameBoyColorEditor()
+                            || (usesSuperNesEditor()
+                                && activeCharacterColorDepth() < 8)) ? 7 : 0),
              usesGenesisMode5Editor()
                  && savedEditor.value(QStringLiteral("flipX")).toBool(),
              usesGenesisMode5Editor()
@@ -2924,37 +3013,49 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         loadSpriteBank(savedSet.value(QStringLiteral("patterns16")).toArray(),
                        set.patterns16, 256);
         loadSpriteBank(savedSet.value(QStringLiteral("patternsGenesis")).toArray(),
-                       set.patternsGenesis, 4096);
+                       set.patternsGenesis, 8192);
         const QJsonArray placements = savedSet.value(QStringLiteral("placements")).toArray();
         for (int index = 0;
              index < std::min(128, static_cast<int>(placements.size())); ++index) {
             const QJsonObject savedPlacement = placements[index].toObject();
             auto& placement = set.placements[static_cast<std::size_t>(index)];
-            placement.x = std::clamp(savedPlacement.value(QStringLiteral("x")).toInt(),
-                                     -32, placementWidth_ - 1);
-            placement.y = std::clamp(savedPlacement.value(QStringLiteral("y")).toInt(),
-                                     -32, placementHeight_ - 1);
-            placement.x16 = std::clamp(
-                savedPlacement.value(QStringLiteral("x16")).toInt(placement.x),
-                -32, placementWidth_ - 1);
-            placement.y16 = std::clamp(
-                savedPlacement.value(QStringLiteral("y16")).toInt(placement.y),
-                -32, placementHeight_ - 1);
-            placement.visible = savedPlacement.value(QStringLiteral("visible")).toBool(true);
             placement.size = normalizedSpriteSize(
                 savedPlacement.value(QStringLiteral("size")).toInt(8));
+            const int minimumX = -spritePatternWidth(placement.size);
+            const int minimumY = -spritePatternHeight(placement.size);
+            placement.x = std::clamp(savedPlacement.value(QStringLiteral("x")).toInt(),
+                                     minimumX, placementWidth_ - 1);
+            placement.y = std::clamp(savedPlacement.value(QStringLiteral("y")).toInt(),
+                                     minimumY, placementHeight_ - 1);
+            placement.x16 = std::clamp(
+                savedPlacement.value(QStringLiteral("x16")).toInt(placement.x),
+                -16, placementWidth_ - 1);
+            placement.y16 = std::clamp(
+                savedPlacement.value(QStringLiteral("y16")).toInt(placement.y),
+                -16, placementHeight_ - 1);
+            placement.visible = savedPlacement.value(QStringLiteral("visible")).toBool(true);
             placement.color = std::clamp(
                 savedPlacement.value(QStringLiteral("color")).toInt(15), 1, 15);
             placement.colorDepth = usesIndexedSpriteEditor()
                 ? activeSpriteColorDepth() : std::clamp(
                 savedPlacement.value(QStringLiteral("colorDepth")).toInt(1), 1, 3);
             placement.palette = std::clamp(
-                savedPlacement.value(QStringLiteral("palette")).toInt(), 0, 7);
+                savedPlacement.value(QStringLiteral("palette")).toInt(), 0,
+                usesNeoGeoEditor() ? 255 : 7);
             placement.flipX = savedPlacement.value(QStringLiteral("flipX")).toBool();
             placement.flipY = savedPlacement.value(QStringLiteral("flipY")).toBool();
             placement.priority = (usesGenesisMode5Editor() || usesGameBoyEditor()
                 || usesGameBoyColorEditor() || usesSuperNesEditor())
                 && savedPlacement.value(QStringLiteral("priority")).toBool();
+            const int maximumScale = usesAtariLynxEditor() ? 400 : 100;
+            placement.horizontalScale = std::clamp(
+                savedPlacement.value(QStringLiteral("horizontalScale")).toInt(100),
+                1, maximumScale);
+            placement.verticalScale = std::clamp(
+                savedPlacement.value(QStringLiteral("verticalScale")).toInt(100),
+                1, maximumScale);
+            placement.chained = usesNeoGeoEditor() && index > 0
+                && savedPlacement.value(QStringLiteral("chained")).toBool();
         }
         spriteSets_.push_back(std::move(set));
     }

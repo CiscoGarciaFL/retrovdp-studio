@@ -48,6 +48,24 @@ int EditorProjectController::spritePatternsPerSet() const
 
 int EditorProjectController::normalizedSpriteSize(int value) const
 {
+    if (usesAtariLynxEditor()) {
+        int width = value >= 100 ? value / 100 : value;
+        int height = value >= 100 ? value % 100 : value;
+        const auto snap = [](int dimension) {
+            return dimension <= 12 ? 8 : (dimension <= 24 ? 16
+                : (dimension <= 48 ? 32 : 64));
+        };
+        width = snap(width);
+        height = snap(height);
+        return width * 100 + height;
+    }
+    if (usesNeoGeoEditor()) {
+        int height = value;
+        height = height <= 24 ? 16 : (height <= 48 ? 32
+            : (height <= 96 ? 64 : (height <= 192 ? 128
+            : (height <= 384 ? 256 : 512))));
+        return height;
+    }
     if (usesSuperNesEditor()) {
         int size = value >= 100 ? value / 100 : value;
         size = size <= 12 ? 8 : (size <= 24 ? 16 : (size <= 48 ? 32 : 64));
@@ -75,6 +93,7 @@ int EditorProjectController::spritePatternWidth(int size) const
 {
     size = normalizedSpriteSize(size);
     if (usesSmsMode4Editor()) return 8;
+    if (usesNeoGeoEditor()) return 16;
     if (usesCompoundSpriteEditor()) return size / 100;
     return size;
 }
@@ -82,6 +101,7 @@ int EditorProjectController::spritePatternWidth(int size) const
 int EditorProjectController::spritePatternHeight(int size) const
 {
     size = normalizedSpriteSize(size);
+    if (usesNeoGeoEditor()) return size;
     return usesCompoundSpriteEditor() ? size % 100 : size;
 }
 
@@ -207,8 +227,9 @@ void EditorProjectController::setActiveSpritePaletteBank(int value)
     if (spriteSets_.empty()) return;
     value = std::clamp(value, 0, usesGenesisMode5Editor() ? 3
                               : (usesHuC6270Editor() ? 15
+                              : (usesNeoGeoEditor() ? 255
                               : (usesGameBoyEditor() ? 1
-                              : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 7 : 0))));
+                              : (usesGameBoyColorEditor() || usesSuperNesEditor() ? 7 : 0)))));
     auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.palette == value) return;
@@ -233,6 +254,98 @@ void EditorProjectController::setActiveSpritePriority(bool value)
                           .placements[static_cast<std::size_t>(activeSprite_)];
     if (placement.priority == value) return;
     placement.priority = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
+int EditorProjectController::activeObjectHorizontalScale() const
+{
+    if (spriteSets_.empty()) return 100;
+    return spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+        .placements[static_cast<std::size_t>(activeSprite_)].horizontalScale;
+}
+
+int EditorProjectController::activeObjectVerticalScale() const
+{
+    if (spriteSets_.empty()) return 100;
+    return spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+        .placements[static_cast<std::size_t>(activeSprite_)].verticalScale;
+}
+
+bool EditorProjectController::activeObjectChained() const
+{
+    return !spriteSets_.empty() && usesNeoGeoEditor() && activeSprite_ > 0
+        && spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+               .placements[static_cast<std::size_t>(activeSprite_)].chained;
+}
+
+bool EditorProjectController::activeObjectFlipX() const
+{
+    return !spriteSets_.empty() && usesNeoGeoEditor()
+        && spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+               .placements[static_cast<std::size_t>(activeSprite_)].flipX;
+}
+
+bool EditorProjectController::activeObjectFlipY() const
+{
+    return !spriteSets_.empty() && usesNeoGeoEditor()
+        && spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+               .placements[static_cast<std::size_t>(activeSprite_)].flipY;
+}
+
+void EditorProjectController::setActiveObjectHorizontalScale(int value)
+{
+    if ((!usesAtariLynxEditor() && !usesNeoGeoEditor()) || spriteSets_.empty()) return;
+    value = std::clamp(value, 1, usesAtariLynxEditor() ? 400 : 100);
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.horizontalScale == value) return;
+    placement.horizontalScale = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveObjectVerticalScale(int value)
+{
+    if ((!usesAtariLynxEditor() && !usesNeoGeoEditor()) || spriteSets_.empty()) return;
+    value = std::clamp(value, 1, usesAtariLynxEditor() ? 400 : 100);
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.verticalScale == value) return;
+    placement.verticalScale = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveObjectChained(bool value)
+{
+    if (!usesNeoGeoEditor() || spriteSets_.empty() || activeSprite_ == 0) return;
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.chained == value) return;
+    placement.chained = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveObjectFlipX(bool value)
+{
+    if (!usesNeoGeoEditor() || spriteSets_.empty()) return;
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.flipX == value) return;
+    placement.flipX = value;
+    ++spriteRevision_;
+    emit projectChanged();
+}
+
+void EditorProjectController::setActiveObjectFlipY(bool value)
+{
+    if (!usesNeoGeoEditor() || spriteSets_.empty()) return;
+    auto& placement = spriteSets_[static_cast<std::size_t>(activeSpriteSet_)]
+                          .placements[static_cast<std::size_t>(activeSprite_)];
+    if (placement.flipY == value) return;
+    placement.flipY = value;
     ++spriteRevision_;
     emit projectChanged();
 }
@@ -797,7 +910,7 @@ std::vector<std::uint8_t> EditorProjectController::pannedSpritePixels() const
 {
     const auto& source = spritePanEnhanced_ && spritePanOriginal_.f18aOverride
         ? spritePanOriginal_.f18aPixels : spritePanOriginal_.baselinePixels;
-    std::vector<std::uint8_t> result(2048);
+    std::vector<std::uint8_t> result(8192);
     const int width = spritePatternWidth(spritePanSize_);
     const int height = spritePatternHeight(spritePanSize_);
     for (int row = 0; row < height; ++row) {
@@ -840,8 +953,9 @@ EditorProjectController::spritePatternFromClipboard() const
         ? root.value(QStringLiteral("width")).toInt() : data.size;
     data.height = root.contains(QStringLiteral("height"))
         ? root.value(QStringLiteral("height")).toInt() : data.size;
-    if (data.width < 8 || data.width > 32 || data.width % 8 != 0
-        || data.height < 8 || data.height > 64)
+    if (data.width < 8 || data.width > 64 || data.width % 8 != 0
+        || data.height < 8 || data.height > 512 || data.height % 8 != 0
+        || static_cast<std::size_t>(data.width * data.height) > data.pixels.size())
         return std::nullopt;
     data.enhanced = root.value(QStringLiteral("scope")).toString()
         == QStringLiteral("f18a-override");

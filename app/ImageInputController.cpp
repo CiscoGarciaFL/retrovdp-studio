@@ -395,6 +395,37 @@ std::vector<core::RgbColor> decodeTargetPalette(
     const core::TargetMemoryImage& target,
     std::span<const std::uint8_t> bytes)
 {
+    if (target.profile == core::TargetProfileId::AtariLynx && bytes.size() >= 32U) {
+        std::vector<core::RgbColor> colors;
+        colors.reserve(16U);
+        for (std::size_t index = 0; index < 16U; ++index) {
+            colors.push_back({
+                static_cast<std::uint8_t>((bytes[16U + index] & 0x0fU) * 17U),
+                static_cast<std::uint8_t>((bytes[index] & 0x0fU) * 17U),
+                static_cast<std::uint8_t>((bytes[16U + index] >> 4U) * 17U),
+            });
+        }
+        return colors;
+    }
+    if (target.profile == core::TargetProfileId::NeoGeo) {
+        std::vector<core::RgbColor> colors;
+        colors.reserve(bytes.size() / 2U);
+        for (std::size_t offset = 0; offset + 1U < bytes.size(); offset += 2U) {
+            const std::uint16_t word = static_cast<std::uint16_t>(
+                (static_cast<std::uint16_t>(bytes[offset]) << 8U)
+                | bytes[offset + 1U]);
+            const std::uint8_t red = static_cast<std::uint8_t>(
+                (((word >> 8U) & 0x0fU) << 1U) | ((word >> 14U) & 1U));
+            const std::uint8_t green = static_cast<std::uint8_t>(
+                (((word >> 4U) & 0x0fU) << 1U) | ((word >> 13U) & 1U));
+            const std::uint8_t blue = static_cast<std::uint8_t>(
+                ((word & 0x0fU) << 1U) | ((word >> 12U) & 1U));
+            colors.push_back({static_cast<std::uint8_t>(red * 255U / 31U),
+                              static_cast<std::uint8_t>(green * 255U / 31U),
+                              static_cast<std::uint8_t>(blue * 255U / 31U)});
+        }
+        return colors;
+    }
     if (target.profile == core::TargetProfileId::SegaMasterSystem) {
         std::vector<core::RgbColor> colors;
         colors.reserve(bytes.size());
@@ -3929,7 +3960,7 @@ bool ImageInputController::applyRecipeSettings(const QJsonObject& object, QStrin
     SettingsSnapshot value = snapshot();
     value.settings.mode = static_cast<core::ConversionMode>(
         std::clamp(object.value(QStringLiteral("mode")).toInt(conversionMode()), 0,
-                   static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
+                   static_cast<int>(core::ConversionMode::NeoGeoChainedSprites)));
     const std::string requestedProfile = object.value(QStringLiteral("targetProfile"))
         .toString().toStdString();
     value.settings.targetProfile = requestedProfile.empty()
@@ -4071,7 +4102,7 @@ void ImageInputController::loadSettings()
     persisted.beginGroup(QStringLiteral("conversion"));
     settings_.mode = static_cast<core::ConversionMode>(
         std::clamp(persisted.value(QStringLiteral("mode"), 0).toInt(), 0,
-                   static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
+                   static_cast<int>(core::ConversionMode::NeoGeoChainedSprites)));
     const std::string persistedProfile = persisted.value(
         QStringLiteral("targetProfile")).toString().toStdString();
     settings_.targetProfile = persistedProfile.empty()
@@ -4239,7 +4270,7 @@ void ImageInputController::saveSettings() const
 void ImageInputController::setTargetProfile(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::TargetProfileId::SuperNes));
+                       static_cast<int>(core::TargetProfileId::NeoGeo));
     const auto requested = static_cast<core::TargetProfileId>(value);
     const auto& profile = core::targetProfile(requested);
     if (profile.status != core::TargetProfileStatus::Implemented
@@ -4257,7 +4288,7 @@ void ImageInputController::setTargetProfile(int value)
 void ImageInputController::setConversionMode(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::ConversionMode::SuperNesMode3Background));
+                       static_cast<int>(core::ConversionMode::NeoGeoChainedSprites));
     const auto mode = static_cast<core::ConversionMode>(value);
     const auto effectiveProfile = core::effectiveTargetProfile(
         settings_.targetProfile, mode);

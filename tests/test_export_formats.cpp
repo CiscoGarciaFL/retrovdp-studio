@@ -303,6 +303,9 @@ void testAllTargetLayouts(TestContext& test)
         core::ConversionMode::SuperNesMode0Background,
         core::ConversionMode::SuperNesMode1Background,
         core::ConversionMode::SuperNesMode3Background,
+        core::ConversionMode::AtariLynxObjectScene,
+        core::ConversionMode::NeoGeoFixLayer,
+        core::ConversionMode::NeoGeoChainedSprites,
     };
     const std::vector<formats::ExportFormat> tableFormats{
         formats::ExportFormat::Raw,
@@ -384,6 +387,20 @@ void testAllTargetLayouts(TestContext& test)
                                     mode >= core::ConversionMode::SuperNesMode0Background
                                         ? "LAYOUT.CGRAM" : "LAYOUT.PAL") != nullptr,
                             "raw Nintendo PPU exports should use native asset extensions");
+            }
+            const bool objectAssets = mode >= core::ConversionMode::AtariLynxObjectScene
+                && mode <= core::ConversionMode::NeoGeoChainedSprites;
+            if (format == formats::ExportFormat::Raw && objectAssets) {
+                const bool fix = mode == core::ConversionMode::NeoGeoFixLayer;
+                test.expect(findFile(manifest, fix ? "LAYOUT.FIX" : "LAYOUT.SPR") != nullptr
+                                && findFile(manifest, "LAYOUT.PAL") != nullptr
+                                && findFile(manifest, "LAYOUT.REG") != nullptr
+                                && (fix
+                                    ? findFile(manifest, "LAYOUT.FIXMAP") != nullptr
+                                    : findFile(manifest,
+                                        mode == core::ConversionMode::AtariLynxObjectScene
+                                            ? "LAYOUT.SCB" : "LAYOUT.VRAM") != nullptr),
+                            "raw object-processor exports should use native object and FIX extensions");
             }
         }
         test.expect(formats::isExportApplicable(formats::ExportFormat::Png, mode),

@@ -11,6 +11,7 @@
 #include "retrovdp/core/ImageTransform.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
 #include "retrovdp/core/NintendoPpuConverter.hpp"
+#include "retrovdp/core/ObjectProcessorConverter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/RgbImage.hpp"
 #include "retrovdp/core/SegaGenesisVdpConverter.hpp"
@@ -101,6 +102,7 @@ using retrovdp::core::convertHalfMulticolor9918;
 using retrovdp::core::convertHuC6270Background;
 using retrovdp::core::convertMulticolor9918;
 using retrovdp::core::convertNintendoPpu;
+using retrovdp::core::convertObjectProcessor;
 using retrovdp::core::defaultBitmap9918Palette;
 using retrovdp::core::ditherConfiguration;
 using retrovdp::core::expectedTargetTables;
@@ -1576,8 +1578,8 @@ void testConversionMemoryEstimate(TestContext &test)
 void testTargetProfiles(TestContext &test)
 {
     const auto profiles = retrovdp::core::targetProfiles();
-    test.expect(profiles.size() == 12,
-                "the registry should publish every implemented VDP and PPU profile");
+    test.expect(profiles.size() == 14,
+                "the registry should publish every implemented video, picture, and object processor profile");
 
     const auto& tms9918 = retrovdp::core::targetProfile(TargetProfileId::Tms9918A);
     const auto& f18a = retrovdp::core::targetProfile(TargetProfileId::F18A);
@@ -1590,6 +1592,8 @@ void testTargetProfiles(TestContext &test)
     const auto& huc6270 = retrovdp::core::targetProfile(TargetProfileId::HuC6270);
     const auto& vicII = retrovdp::core::targetProfile(TargetProfileId::VicII);
     const auto& vic = retrovdp::core::targetProfile(TargetProfileId::Vic);
+    const auto& lynx = retrovdp::core::targetProfile(TargetProfileId::AtariLynx);
+    const auto& neoGeo = retrovdp::core::targetProfile(TargetProfileId::NeoGeo);
     test.expect(tms9918.stableId == "tms9918a"
                     && tms9918.status == TargetProfileStatus::Implemented
                     && retrovdp::core::hasCapability(
@@ -1699,6 +1703,24 @@ void testTargetProfiles(TestContext &test)
                         TargetProfileId::Vic,
                         ConversionMode::VicMulticolorCharacter),
                 "the VIC-II and VIC profiles should expose native character, bitmap, and sprite capabilities");
+    test.expect(lynx.stableId == "atari-lynx"
+                    && lynx.kind == retrovdp::core::TargetKind::ObjectProcessor
+                    && lynx.status == TargetProfileStatus::Implemented
+                    && retrovdp::core::hasCapability(
+                        lynx.capabilities, TargetCapability::ObjectLists)
+                    && retrovdp::core::supportsConversionMode(
+                        TargetProfileId::AtariLynx,
+                        ConversionMode::AtariLynxObjectScene)
+                    && neoGeo.stableId == "neo-geo"
+                    && neoGeo.kind == retrovdp::core::TargetKind::ObjectProcessor
+                    && neoGeo.characterPatterns.patternsPerSet == 4096
+                    && neoGeo.sprites.maximumPixelSize == 512
+                    && retrovdp::core::hasCapability(
+                        neoGeo.capabilities, TargetCapability::ObjectChaining)
+                    && retrovdp::core::supportsConversionMode(
+                        TargetProfileId::NeoGeo,
+                        ConversionMode::NeoGeoChainedSprites),
+                "object-processor profiles should publish native object-list and chaining constraints");
     test.expect(!retrovdp::core::supportsConversionMode(
                     TargetProfileId::Tms9918A, ConversionMode::PalettedBitmapF18A),
                 "target profiles should reject modes outside their capabilities");
@@ -1722,7 +1744,7 @@ void testTargetProfiles(TestContext &test)
                 "stable IDs should reject ambiguous separators");
 
     const auto modes = retrovdp::core::displayModes();
-    test.expect(modes.size() == 36 && retrovdp::core::validateRegistry(),
+    test.expect(modes.size() == 39 && retrovdp::core::validateRegistry(),
                 "the target and display-mode registries should validate as one contract");
     const auto& f18aMode = retrovdp::core::displayMode(
         ConversionMode::PalettedBitmapF18A);
@@ -1881,6 +1903,64 @@ void testNintendoPpuConversion(TestContext& test)
                         && result.target->tables.front().bytes.size() == modeCase.patternBytes
                         && validateTargetTables(*result.target),
                     "Nintendo PPU conversion should emit a validated native memory image");
+    }
+}
+
+void testObjectProcessorConversion(TestContext& test)
+{
+    struct ModeCase {
+        ConversionMode mode;
+        TargetProfileId profile;
+        std::uint32_t width;
+        std::uint32_t height;
+        TargetTableRole firstRole;
+        std::size_t firstBytes;
+        TargetTableRole secondRole;
+        std::size_t secondBytes;
+    };
+    constexpr std::array cases{
+        ModeCase{ConversionMode::AtariLynxObjectScene, TargetProfileId::AtariLynx,
+                 160, 102, TargetTableRole::Pattern, 8263,
+                 TargetTableRole::ObjectAttributes, 23},
+        ModeCase{ConversionMode::NeoGeoFixLayer, TargetProfileId::NeoGeo,
+                 320, 224, TargetTableRole::Pattern, 128 * 1024,
+                 TargetTableRole::TileMap, 8192},
+        ModeCase{ConversionMode::NeoGeoChainedSprites, TargetProfileId::NeoGeo,
+                 320, 224, TargetTableRole::Pattern, 20 * 14 * 128,
+                 TargetTableRole::ObjectAttributes, 0x8600 * 2},
+    };
+    for (const auto& modeCase : cases) {
+        auto source = RgbImage::createTightlyPacked(
+            modeCase.width, modeCase.height, PixelFormat::Rgb888);
+        test.expect(source.has_value(), "the object-processor test source should allocate");
+        if (!source) continue;
+        for (std::uint32_t y = 0; y < source->height(); ++y) {
+            auto row = source->row(y);
+            for (std::uint32_t x = 0; x < source->width(); ++x) {
+                const std::size_t offset = static_cast<std::size_t>(x) * 3U;
+                row[offset] = static_cast<std::uint8_t>((x * 7U) & 0xffU);
+                row[offset + 1U] = static_cast<std::uint8_t>((y * 11U) & 0xffU);
+                row[offset + 2U] = static_cast<std::uint8_t>((x + y) & 0xffU);
+            }
+        }
+        ConversionSettings settings;
+        settings.targetProfile = modeCase.profile;
+        settings.mode = modeCase.mode;
+        settings.dither = DitherMode::None;
+        const ConversionResult result = convertObjectProcessor(*source, settings);
+        test.expect(result.succeeded() && result.preview.has_value()
+                        && result.preview->width() == modeCase.width
+                        && result.preview->height() == modeCase.height
+                        && result.target.has_value()
+                        && result.target->profile == modeCase.profile
+                        && result.target->mode == modeCase.mode
+                        && result.target->tables.size() == 4
+                        && result.target->tables[0].role == modeCase.firstRole
+                        && result.target->tables[0].bytes.size() == modeCase.firstBytes
+                        && result.target->tables[1].role == modeCase.secondRole
+                        && result.target->tables[1].bytes.size() == modeCase.secondBytes
+                        && validateTargetTables(*result.target),
+                    "object-processor conversion should emit validated native object and FIX assets");
     }
 }
 
@@ -2403,6 +2483,14 @@ void testTargetData(TestContext &test)
         ConversionMode::VicIIMulticolorBitmap,
         ConversionMode::VicHiresCharacter,
         ConversionMode::VicMulticolorCharacter,
+        ConversionMode::GameBoyBackground,
+        ConversionMode::GameBoyColorBackground,
+        ConversionMode::SuperNesMode0Background,
+        ConversionMode::SuperNesMode1Background,
+        ConversionMode::SuperNesMode3Background,
+        ConversionMode::AtariLynxObjectScene,
+        ConversionMode::NeoGeoFixLayer,
+        ConversionMode::NeoGeoChainedSprites,
     };
 
     constexpr std::array roles{
@@ -2411,6 +2499,7 @@ void testTargetData(TestContext &test)
         TargetTableRole::FixedPattern, TargetTableRole::Palette,
         TargetTableRole::ScanlinePalettes, TargetTableRole::Framebuffer,
         TargetTableRole::TileMap, TargetTableRole::DisplayRegisters,
+        TargetTableRole::ObjectAttributes,
     };
     for (const auto role : roles) {
         const auto id = retrovdp::core::targetTableRoleId(role);
@@ -3013,6 +3102,7 @@ int main(int argc, char *argv[])
     testHuC6270Conversion(test);
     testCommodoreVdpConversion(test);
     testNintendoPpuConversion(test);
+    testObjectProcessorConversion(test);
     testImageAdjustments(test);
     testPaletteSelection(test);
     testRgbImage(test);

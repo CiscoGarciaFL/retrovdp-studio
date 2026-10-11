@@ -119,17 +119,17 @@
       ]
     },
     {
-      "id": "atari-lynx", "name": "Atari Lynx Suzy / Mikey", "category": "object-processors", "kind": "Object processor", "status": "planned",
+      "id": "atari-lynx", "name": "Atari Lynx Suzy / Mikey", "category": "object-processors", "kind": "Object processor", "status": "implemented",
       "hardware": "Atari Lynx and Lynx II handheld consoles", "vramBytes": 65536,
-      "modes": ["lynx-suzy-object-engine", "lynx-mikey-160x102"],
-      "workspaces": {"screenImage": "planned 160x102 packed-pixel conversion", "character": "planned software-tile workflow", "sprite": "planned Suzy object-list sprite authoring"},
+      "modes": ["atari-lynx-object-scene"],
+      "workspaces": {"screenImage": "native 160x102 4bpp object-scene conversion", "character": "not applicable; Suzy is object-centric", "sprite": "native variable-size object entries, placement, SCBs, line data, palette, and metadata export"},
       "images": [{"local": "assets/targets/atari-lynx/atari-lynx-ii.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Atari-Lynx-II-Handheld-Angled.jpg/960px-Atari-Lynx-II-Handheld-Angled.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Atari-Lynx-II-Handheld-Angled.jpg", "license": "Public domain", "credit": "Evan-Amos / Wikimedia Commons"}]
     },
     {
-      "id": "neo-geo", "name": "SNK Neo Geo", "category": "object-processors", "kind": "Object processor", "status": "planned",
+      "id": "neo-geo", "name": "SNK Neo Geo", "category": "object-processors", "kind": "Object processor", "status": "implemented",
       "hardware": "SNK Neo Geo AES home console", "vramBytes": 65536,
       "modes": ["neo-geo-fixed-layer", "neo-geo-chained-sprites"],
-      "workspaces": {"screenImage": "planned fixed-layer and sprite composition", "character": "planned 8x8 fixed-layer tile authoring", "sprite": "planned chained 16x16 object authoring"},
+      "workspaces": {"screenImage": "native 320x224 FIX-layer or chained-object conversion", "character": "native 8x8 FIX characters and column-major map", "sprite": "native 16-pixel-wide object strips up to 32 tiles high with VRAM, palette, and attribute export"},
       "images": [{"local": "assets/targets/neo-geo/neo-geo-aes.png", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Neo-Geo-AES-Console-Set.png/960px-Neo-Geo-AES-Console-Set.png", "sourcePage": "https://commons.wikimedia.org/wiki/File:Neo-Geo-AES-Console-Set.png", "license": "CC BY-SA 3.0", "credit": "Evan-Amos / Wikimedia Commons"}]
     },
     {

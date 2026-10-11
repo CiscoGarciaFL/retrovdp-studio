@@ -90,6 +90,11 @@ constexpr std::array superNesModes{
     ConversionMode::SuperNesMode1Background,
     ConversionMode::SuperNesMode3Background,
 };
+constexpr std::array atariLynxModes{ConversionMode::AtariLynxObjectScene};
+constexpr std::array neoGeoModes{
+    ConversionMode::NeoGeoFixLayer,
+    ConversionMode::NeoGeoChainedSprites,
+};
 
 constexpr TargetCapability commonCapabilities =
     TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
@@ -324,6 +329,27 @@ const std::array modes{
                           {256, 224, {8, 7}},
                           {PaletteModel::ProgrammableRgb, 256, 256, 5},
                           ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::AtariLynxObjectScene,
+                          mustId<ModeId>("atari-lynx-object-scene"),
+                          "Atari Lynx Suzy Object Scene (160x102)",
+                          TargetProfileId::AtariLynx,
+                          {160, 102, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 16, 16, 4},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::NeoGeoFixLayer,
+                          mustId<ModeId>("neo-geo-fix-layer"),
+                          "Neo Geo FIX Layer (320x224)",
+                          TargetProfileId::NeoGeo,
+                          {320, 224, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 4096, 240, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::NeoGeoChainedSprites,
+                          mustId<ModeId>("neo-geo-chained-sprites"),
+                          "Neo Geo Chained Sprite Scene (320x224)",
+                          TargetProfileId::NeoGeo,
+                          {320, 224, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 4096, 240, 5},
+                          ModeOption::PaletteSelection},
 };
 
 const std::array profiles{
@@ -456,6 +482,30 @@ const std::array profiles{
                       | TargetCapability::HorizontalScroll,
                   {8, 8, 1024, 1, 32, 32},
                   {8, 64, 128, 128, 4, false, true}, superNesModes},
+    TargetProfile{TargetProfileId::AtariLynx,
+                  mustId<TargetId>("atari-lynx"),
+                  "Atari Lynx Suzy / Mikey",
+                  TargetKind::ObjectProcessor, TargetProfileStatus::Implemented,
+                  64U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::Sprites | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor | TargetCapability::ObjectLists
+                      | TargetCapability::ObjectScaling,
+                  {8, 8, 1, 1, 20, 13},
+                  {8, 64, 128, 128, 4, false, true}, atariLynxModes},
+    TargetProfile{TargetProfileId::NeoGeo,
+                  mustId<TargetId>("neo-geo"),
+                  "SNK Neo Geo",
+                  TargetKind::ObjectProcessor, TargetProfileStatus::Implemented,
+                  68U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor | TargetCapability::ObjectLists
+                      | TargetCapability::ObjectScaling
+                      | TargetCapability::ObjectChaining,
+                  {8, 8, 4096, 1, 40, 32},
+                  {16, 512, 128, 381, 4, false, true}, neoGeoModes},
 };
 
 } // namespace
@@ -636,6 +686,10 @@ ConversionMode defaultConversionMode(TargetProfileId profile)
         return ConversionMode::GameBoyColorBackground;
     if (profile == TargetProfileId::SuperNes)
         return ConversionMode::SuperNesMode1Background;
+    if (profile == TargetProfileId::AtariLynx)
+        return ConversionMode::AtariLynxObjectScene;
+    if (profile == TargetProfileId::NeoGeo)
+        return ConversionMode::NeoGeoChainedSprites;
     return supported.front();
 }
 

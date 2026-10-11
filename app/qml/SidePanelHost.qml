@@ -43,9 +43,12 @@ Item {
         id: spriteSidePanel
         EditorSidePanelPlaceholder {
             objectName: "spriteEditorSidePanel"
-            editorTitle: qsTr("Sprite Options")
+            editorTitle: editorProject.activeTargetInfo.objectProcessor
+                         ? qsTr("Object Options") : qsTr("Sprite Options")
             editorKind: 1
-            importDescription: qsTr("Sprite import will select a Screen Image region, choose sprite dimensions and transparency, reduce its colors, and fit it to the active hardware palette before committing editable sprite data.")
+            importDescription: editorProject.activeTargetInfo.objectProcessor
+                               ? qsTr("Object options control dimensions, palette, priority, transform attributes, and scene placement before native export.")
+                               : qsTr("Sprite import will select a Screen Image region, choose sprite dimensions and transparency, reduce its colors, and fit it to the active hardware palette before committing editable sprite data.")
             closable: root.closable
             onCloseRequested: root.closeRequested()
         }

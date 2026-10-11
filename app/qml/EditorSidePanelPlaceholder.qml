@@ -236,7 +236,9 @@ ScrollView {
                     }
                     Label {
                         visible: editorProject.activeTargetInfo.spritePaletteBankCount > 1
-                        text: qsTr("Active sprite palette")
+                        text: editorProject.activeTargetInfo.objectProcessor
+                              ? qsTr("Active object palette")
+                              : qsTr("Active sprite palette")
                     }
                     ComboBox {
                         objectName: root.objectName + "SpritePaletteBankComboBox"
@@ -254,6 +256,75 @@ ScrollView {
                             verticalAlignment: Text.AlignVCenter
                         }
                         onActivated: index => editorProject.activeSpritePaletteBank = index
+                    }
+                    Label {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectScaling
+                        text: qsTr("Horizontal scale")
+                    }
+                    SpinBox {
+                        objectName: root.objectName + "ObjectHorizontalScaleSpinBox"
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectScaling
+                        from: 1
+                        to: editorProject.activeTargetInfo.id === "atari-lynx" ? 400 : 100
+                        value: editorProject.activeObjectHorizontalScale
+                        editable: true
+                        textFromValue: (value, locale) => value + "%"
+                        valueFromText: (text, locale) => parseInt(text)
+                        onValueModified: editorProject.activeObjectHorizontalScale = value
+                    }
+                    Label {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectScaling
+                        text: qsTr("Vertical scale")
+                    }
+                    SpinBox {
+                        objectName: root.objectName + "ObjectVerticalScaleSpinBox"
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectScaling
+                        from: 1
+                        to: editorProject.activeTargetInfo.id === "atari-lynx" ? 400 : 100
+                        value: editorProject.activeObjectVerticalScale
+                        editable: true
+                        textFromValue: (value, locale) => value + "%"
+                        valueFromText: (text, locale) => parseInt(text)
+                        onValueModified: editorProject.activeObjectVerticalScale = value
+                    }
+                    Label {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectChaining
+                        text: qsTr("Object chaining")
+                    }
+                    CheckBox {
+                        objectName: root.objectName + "ObjectChainedCheckBox"
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.objectChaining
+                        enabled: editorProject.activeSprite > 0
+                        text: qsTr("Chain to previous strip")
+                        checked: editorProject.activeObjectChained
+                        onToggled: editorProject.activeObjectChained = checked
+                    }
+                    Label {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.id === "neo-geo"
+                        text: qsTr("Object transform")
+                    }
+                    RowLayout {
+                        visible: root.editorKind === 1
+                                 && editorProject.activeTargetInfo.id === "neo-geo"
+                        CheckBox {
+                            objectName: root.objectName + "ObjectFlipXCheckBox"
+                            text: qsTr("Flip X")
+                            checked: editorProject.activeObjectFlipX
+                            onToggled: editorProject.activeObjectFlipX = checked
+                        }
+                        CheckBox {
+                            objectName: root.objectName + "ObjectFlipYCheckBox"
+                            text: qsTr("Flip Y")
+                            checked: editorProject.activeObjectFlipY
+                            onToggled: editorProject.activeObjectFlipY = checked
+                        }
                     }
                     Label {
                         visible: root.editorKind === 1
@@ -300,6 +371,10 @@ ScrollView {
                     Layout.fillWidth: true
                     text: editorProject.activeTargetInfo.id === "sega-genesis-vdp"
                           ? qsTr("Mode V gives every sprite its own 8, 16, 24, or 32-pixel width and height, a 4bpp palette, and transparent color index 0. Choose the entry first, then set its size before drawing.")
+                          : editorProject.activeTargetInfo.id === "atari-lynx"
+                          ? qsTr("Each Suzy object has independent width, height, scaling, 4bpp pen data, and placement. Native export links its SCB to the line-data payload.")
+                          : editorProject.activeTargetInfo.id === "neo-geo"
+                          ? qsTr("Each Neo Geo object is a 16-pixel strip up to 32 tiles high with palette, shrink, flip, placement, and optional chaining to the previous strip.")
                           : editorProject.activeTargetInfo.spritePerItemSize
                           ? qsTr("This target stores size and color depth per sprite. Target-specific edits are kept separate from compatible base data.")
                           : editorProject.activeTargetInfo.id === "sega-sms-vdp"

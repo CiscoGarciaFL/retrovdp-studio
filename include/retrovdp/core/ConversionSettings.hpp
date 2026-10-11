@@ -17,6 +17,8 @@ enum class TargetProfileId : std::uint8_t {
     GameBoy,
     GameBoyColor,
     SuperNes,
+    AtariLynx,
+    NeoGeo,
 };
 
 enum class ConversionMode : std::uint8_t {
@@ -56,6 +58,9 @@ enum class ConversionMode : std::uint8_t {
     SuperNesMode0Background,
     SuperNesMode1Background,
     SuperNesMode3Background,
+    AtariLynxObjectScene,
+    NeoGeoFixLayer,
+    NeoGeoChainedSprites,
 };
 
 enum class DitherMode : std::uint8_t {

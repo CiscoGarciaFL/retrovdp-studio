@@ -22,7 +22,8 @@ source library
 
 TMS9918A, F18A, V9938, V9958, Sega Master System, Sega Genesis/Mega Drive,
 NEC/Hudson HuC6270, MOS VIC-II, MOS VIC, Nintendo Game Boy, Nintendo Game Boy
-Color, and Super NES are implemented target profiles.
+Color, Super NES, Atari Lynx Suzy/Mikey, and SNK Neo Geo are implemented target
+profiles.
 The Yamaha profiles expose their native bitmap modes through the
 same registered target contract. The Master System profile exposes native
 Mode 4 at 256×192, 256×224, and PAL 256×240, with RGB222 CRAM, planar tile,
@@ -37,6 +38,13 @@ are explicitly revision-dependent, and their RAW outputs use native character,
 bitmap, screen, color-RAM, and register regions. The Nintendo profiles provide
 native planar Screen Image conversion, map and attribute data, Character
 authoring, Sprite/OAM authoring, RGB555 palette data, and register state.
+The Lynx profile exposes a 160×102 object scene, programmable RGB444 palette,
+variable-size 4bpp objects, literal line data, and linked SCB export. Neo Geo
+exposes 320×224 FIX and chained-object conversions, 8×8 FIX characters,
+16-pixel-wide object strips up to 32 tiles high, palette banks, and native VRAM
+attribute export. Object-processor targets label their primary workspaces as
+Object Scene and Object Editor rather than treating them as background-first
+VDPs.
 Additional profiles must use that contract rather than adding unrelated UI
 modes.
 
@@ -141,7 +149,7 @@ formats while keeping direct editor operations honest about hardware meaning.
 
 ## Interface language
 
-The interface uses **Target VDP** for the active hardware rules and **Target
+The interface uses **Active Target** for the active hardware rules and **Target
 mode** for a display or conversion mode within that profile. File commands use
 **Open as Source** for the broad visual path and asset-specific verbs such as
 **Import Patterns**, **Import Sprites**, **Import Tile Map**, and **Import

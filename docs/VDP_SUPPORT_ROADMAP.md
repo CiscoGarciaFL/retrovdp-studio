@@ -110,12 +110,13 @@ share codecs and compatibility analysis without sharing one ambiguous profile.
 
 | Target | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| Atari Lynx Suzy/Mikey graphics system | atari-lynx | Object processor | Planned | Palette-constrained sprite objects, line data encoding, Sprite Control Block generation, framebuffer preview |
-| SNK Neo Geo video hardware | neo-geo | Object processor | Research | 16-pixel-wide sprite strips, FIX-layer characters, palette assignments, chaining and attribute data |
+| Atari Lynx Suzy/Mikey graphics system | atari-lynx | Object processor | Implemented | Palette-constrained objects, literal line data, linked Sprite Control Blocks, framebuffer preview |
+| SNK Neo Geo video hardware | neo-geo | Object processor | Implemented | 16-pixel-wide object strips, FIX-layer characters, palette assignments, chaining and attribute data |
 
-These targets should not be forced through a background-tile-first interface.
-Their compiler contract begins with object lists and produces the target's
-object metadata and pixel payloads together.
+These targets use an object-first interface. Their compiler contract begins
+with object lists and produces the target's object metadata and pixel payloads
+together. See [OBJECT_PROCESSOR_TARGETS.md](OBJECT_PROCESSOR_TARGETS.md) for the
+implemented conversion, editor, and export contracts.
 
 ### Commodore video controllers
 
