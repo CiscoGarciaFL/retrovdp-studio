@@ -1,4 +1,5 @@
 #include "retrovdp/formats/Export.hpp"
+#include "retrovdp/core/TargetProfile.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -306,6 +307,24 @@ void testAllTargetLayouts(TestContext& test)
         core::ConversionMode::AtariLynxObjectScene,
         core::ConversionMode::NeoGeoFixLayer,
         core::ConversionMode::NeoGeoChainedSprites,
+        core::ConversionMode::CpcMode0,
+        core::ConversionMode::CpcMode1,
+        core::ConversionMode::CpcMode2,
+        core::ConversionMode::CgaText40x25,
+        core::ConversionMode::CgaText80x25,
+        core::ConversionMode::CgaGraphics320x200,
+        core::ConversionMode::CgaGraphics640x200,
+        core::ConversionMode::EgaText,
+        core::ConversionMode::EgaGraphics320x200,
+        core::ConversionMode::EgaGraphics640x350,
+        core::ConversionMode::AppleIIeText,
+        core::ConversionMode::AppleIIeLores,
+        core::ConversionMode::AppleIIeHires,
+        core::ConversionMode::AppleIIeDoubleHires,
+        core::ConversionMode::Zx81Text32x24,
+        core::ConversionMode::Zx81Semigraphics64x48,
+        core::ConversionMode::Trs80Text64x16,
+        core::ConversionMode::Trs80Semigraphics128x48,
     };
     const std::vector<formats::ExportFormat> tableFormats{
         formats::ExportFormat::Raw,
@@ -323,7 +342,8 @@ void testAllTargetLayouts(TestContext& test)
         formats::ExportFormat::ExtendedBasicRleProgram,
     };
     for (const auto mode : modes) {
-        core::TargetMemoryImage image{.mode = mode};
+        core::TargetMemoryImage image{.profile = core::primaryTargetProfile(mode),
+                                      .mode = mode};
         for (const auto layout : core::expectedTargetTables(mode)) {
             image.tables.push_back({layout.role,
                                     std::vector<std::uint8_t>(layout.byteSize, 0x5a)});
@@ -401,6 +421,18 @@ void testAllTargetLayouts(TestContext& test)
                                         mode == core::ConversionMode::AtariLynxObjectScene
                                             ? "LAYOUT.SCB" : "LAYOUT.VRAM") != nullptr),
                             "raw object-processor exports should use native object and FIX extensions");
+            }
+            const bool legacyDisplayAssets = mode >= core::ConversionMode::CpcMode0
+                && mode <= core::ConversionMode::Trs80Semigraphics128x48;
+            if (format == formats::ExportFormat::Raw && legacyDisplayAssets) {
+                const auto profile = core::primaryTargetProfile(mode);
+                const char* framebufferName = profile == core::TargetProfileId::TimexTs1000
+                    ? "LAYOUT.DFILE"
+                    : profile == core::TargetProfileId::AppleIIe
+                        ? "LAYOUT.PAGE" : "LAYOUT.VRAM";
+                test.expect(findFile(manifest, framebufferName) != nullptr
+                                && findFile(manifest, "LAYOUT.REG") != nullptr,
+                            "raw adapter exports should use native framebuffer and state extensions");
             }
         }
         test.expect(formats::isExportApplicable(formats::ExportFormat::Png, mode),

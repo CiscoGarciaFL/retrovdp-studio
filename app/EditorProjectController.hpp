@@ -32,6 +32,12 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(bool superNesEnabled READ superNesEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool atariLynxEnabled READ atariLynxEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool neoGeoEnabled READ neoGeoEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool amstradCpcEnabled READ amstradCpcEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool ibmCgaEnabled READ ibmCgaEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool ibmEgaEnabled READ ibmEgaEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool appleIIeEnabled READ appleIIeEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool timexTs1000Enabled READ timexTs1000Enabled NOTIFY projectChanged)
+    Q_PROPERTY(bool trs80Enabled READ trs80Enabled NOTIFY projectChanged)
     Q_PROPERTY(QStringList plannedTargetIds READ plannedTargetIds NOTIFY projectChanged)
     Q_PROPERTY(int activeTarget READ activeTarget WRITE setActiveTarget NOTIFY projectChanged)
     Q_PROPERTY(QVariantList supportedTargets READ supportedTargets NOTIFY projectChanged)
@@ -126,6 +132,12 @@ public:
     [[nodiscard]] bool superNesEnabled() const { return superNesEnabled_; }
     [[nodiscard]] bool atariLynxEnabled() const { return atariLynxEnabled_; }
     [[nodiscard]] bool neoGeoEnabled() const { return neoGeoEnabled_; }
+    [[nodiscard]] bool amstradCpcEnabled() const { return amstradCpcEnabled_; }
+    [[nodiscard]] bool ibmCgaEnabled() const { return ibmCgaEnabled_; }
+    [[nodiscard]] bool ibmEgaEnabled() const { return ibmEgaEnabled_; }
+    [[nodiscard]] bool appleIIeEnabled() const { return appleIIeEnabled_; }
+    [[nodiscard]] bool timexTs1000Enabled() const { return timexTs1000Enabled_; }
+    [[nodiscard]] bool trs80Enabled() const { return trs80Enabled_; }
     [[nodiscard]] QStringList plannedTargetIds() const { return plannedTargetIds_; }
     [[nodiscard]] int activeTarget() const;
     [[nodiscard]] QVariantList supportedTargets() const;
@@ -350,6 +362,7 @@ public:
     Q_INVOKABLE bool exportGenesisCharacterAssets(const QUrl& directoryUrl);
     Q_INVOKABLE bool exportNintendoEditorAssets(const QUrl& directoryUrl);
     Q_INVOKABLE bool exportObjectProcessorEditorAssets(const QUrl& directoryUrl);
+    Q_INVOKABLE bool exportLegacyDisplayEditorAssets(const QUrl& directoryUrl);
     Q_INVOKABLE void clearStatus();
 
 signals:
@@ -506,6 +519,12 @@ private:
     bool superNesEnabled_{};
     bool atariLynxEnabled_{};
     bool neoGeoEnabled_{};
+    bool amstradCpcEnabled_{};
+    bool ibmCgaEnabled_{};
+    bool ibmEgaEnabled_{};
+    bool appleIIeEnabled_{};
+    bool timexTs1000Enabled_{};
+    bool trs80Enabled_{};
     QStringList plannedTargetIds_;
     int previewTarget_{};
     int editScope_{};

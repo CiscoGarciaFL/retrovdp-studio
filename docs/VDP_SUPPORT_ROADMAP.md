@@ -134,12 +134,12 @@ initial support.
 
 | Target environment | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| Amstrad CPC video system | amstrad-cpc | Display adapter | Planned | Mode 0/1/2 pixel packing, mode geometry, palette state, screen-memory interleave |
-| IBM Color/Graphics Adapter | ibm-cga | Display adapter | Research | Packed pixels, scanline bank layout, palette/register state, display-aspect preview |
-| IBM Enhanced Graphics Adapter | ibm-ega | Display adapter | Research | Planar framebuffer output, palette/register state, selected canonical graphics modes |
-| Apple IIe video system | apple-iie | Display adapter | Research | High-resolution and double-high-resolution page layouts, artifact-aware preview, raw page export |
-| Timex Sinclair 1000 / ZX81-class display | timex-ts1000 | Character display | Research | Display-file token stream, fixed glyph preview, text and block-graphics conversion |
-| TRS-80 Model I/III display | trs80-model1-3 | Character display | Research | Text and semigraphics byte streams, screen-grid preview, software object composition |
+| Amstrad CPC video system | amstrad-cpc | Display adapter | Implemented | Mode 0/1/2 pixel packing, mode geometry, palette state, screen-memory interleave |
+| IBM Color/Graphics Adapter | ibm-cga | Display adapter | Implemented | Text buffers, packed pixels, scanline bank layout, palette/register state, display-aspect preview |
+| IBM Enhanced Graphics Adapter | ibm-ega | Display adapter | Implemented | Text buffers, planar framebuffer output, palette/register state, 320×200 and 640×350 graphics |
+| Apple IIe video system | apple-iie | Display adapter | Implemented | Text, lo-res, high-resolution and double-high-resolution page layouts and raw page export |
+| Timex Sinclair 1000 / ZX81-class display | timex-ts1000 | Character display | Implemented | HALT-delimited display-file stream, fixed glyph preview, text and block-graphics conversion |
+| TRS-80 Model I/III display | trs80-model1-3 | Character display | Implemented | Text and native 2×3 semigraphics byte streams and screen-grid preview |
 
 The adapter targets receive the same project, source, validation, preview, and
 export experience as VDP targets. Their implementation differs because the

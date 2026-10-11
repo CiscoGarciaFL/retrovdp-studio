@@ -395,6 +395,27 @@ std::vector<core::RgbColor> decodeTargetPalette(
     const core::TargetMemoryImage& target,
     std::span<const std::uint8_t> bytes)
 {
+    if (target.profile == core::TargetProfileId::AmstradCpc) {
+        std::vector<core::RgbColor> hardware;
+        for (const std::uint8_t green : {0U, 128U, 255U})
+            for (const std::uint8_t red : {0U, 128U, 255U})
+                for (const std::uint8_t blue : {0U, 128U, 255U})
+                    hardware.push_back({red, green, blue});
+        std::vector<core::RgbColor> colors;
+        for (std::size_t index = 0; index < std::min<std::size_t>(16U, bytes.size()); ++index)
+            colors.push_back(hardware[bytes[index] % hardware.size()]);
+        return colors;
+    }
+    if (target.profile == core::TargetProfileId::IbmCga
+        || target.profile == core::TargetProfileId::IbmEga) {
+        constexpr std::array<core::RgbColor, 16> colors{{
+            {0,0,0}, {0,0,170}, {0,170,0}, {0,170,170},
+            {170,0,0}, {170,0,170}, {170,85,0}, {170,170,170},
+            {85,85,85}, {85,85,255}, {85,255,85}, {85,255,255},
+            {255,85,85}, {255,85,255}, {255,255,85}, {255,255,255},
+        }};
+        return std::vector<core::RgbColor>(colors.begin(), colors.end());
+    }
     if (target.profile == core::TargetProfileId::AtariLynx && bytes.size() >= 32U) {
         std::vector<core::RgbColor> colors;
         colors.reserve(16U);
@@ -3960,7 +3981,7 @@ bool ImageInputController::applyRecipeSettings(const QJsonObject& object, QStrin
     SettingsSnapshot value = snapshot();
     value.settings.mode = static_cast<core::ConversionMode>(
         std::clamp(object.value(QStringLiteral("mode")).toInt(conversionMode()), 0,
-                   static_cast<int>(core::ConversionMode::NeoGeoChainedSprites)));
+                   static_cast<int>(core::ConversionMode::Trs80Semigraphics128x48)));
     const std::string requestedProfile = object.value(QStringLiteral("targetProfile"))
         .toString().toStdString();
     value.settings.targetProfile = requestedProfile.empty()
@@ -4102,7 +4123,7 @@ void ImageInputController::loadSettings()
     persisted.beginGroup(QStringLiteral("conversion"));
     settings_.mode = static_cast<core::ConversionMode>(
         std::clamp(persisted.value(QStringLiteral("mode"), 0).toInt(), 0,
-                   static_cast<int>(core::ConversionMode::NeoGeoChainedSprites)));
+                   static_cast<int>(core::ConversionMode::Trs80Semigraphics128x48)));
     const std::string persistedProfile = persisted.value(
         QStringLiteral("targetProfile")).toString().toStdString();
     settings_.targetProfile = persistedProfile.empty()
@@ -4270,7 +4291,7 @@ void ImageInputController::saveSettings() const
 void ImageInputController::setTargetProfile(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::TargetProfileId::NeoGeo));
+                       static_cast<int>(core::TargetProfileId::Trs80Model1_3));
     const auto requested = static_cast<core::TargetProfileId>(value);
     const auto& profile = core::targetProfile(requested);
     if (profile.status != core::TargetProfileStatus::Implemented
@@ -4288,7 +4309,7 @@ void ImageInputController::setTargetProfile(int value)
 void ImageInputController::setConversionMode(int value)
 {
     value = std::clamp(value, 0,
-                       static_cast<int>(core::ConversionMode::NeoGeoChainedSprites));
+                       static_cast<int>(core::ConversionMode::Trs80Semigraphics128x48));
     const auto mode = static_cast<core::ConversionMode>(value);
     const auto effectiveProfile = core::effectiveTargetProfile(
         settings_.targetProfile, mode);

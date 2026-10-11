@@ -19,6 +19,12 @@ enum class TargetProfileId : std::uint8_t {
     SuperNes,
     AtariLynx,
     NeoGeo,
+    AmstradCpc,
+    IbmCga,
+    IbmEga,
+    AppleIIe,
+    TimexTs1000,
+    Trs80Model1_3,
 };
 
 enum class ConversionMode : std::uint8_t {
@@ -61,6 +67,24 @@ enum class ConversionMode : std::uint8_t {
     AtariLynxObjectScene,
     NeoGeoFixLayer,
     NeoGeoChainedSprites,
+    CpcMode0,
+    CpcMode1,
+    CpcMode2,
+    CgaText40x25,
+    CgaText80x25,
+    CgaGraphics320x200,
+    CgaGraphics640x200,
+    EgaText,
+    EgaGraphics320x200,
+    EgaGraphics640x350,
+    AppleIIeText,
+    AppleIIeLores,
+    AppleIIeHires,
+    AppleIIeDoubleHires,
+    Zx81Text32x24,
+    Zx81Semigraphics64x48,
+    Trs80Text64x16,
+    Trs80Semigraphics128x48,
 };
 
 enum class DitherMode : std::uint8_t {

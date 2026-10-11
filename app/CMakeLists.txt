@@ -10,6 +10,7 @@ add_library(retrovdp_app_support STATIC
     EditorProjectController.cpp
     EditorProjectControllerNintendo.cpp
     EditorProjectControllerObject.cpp
+    EditorProjectControllerLegacyDisplay.cpp
     EditorProjectControllerSprite.cpp
     EditorProjectController.hpp
     ImageInputController.cpp

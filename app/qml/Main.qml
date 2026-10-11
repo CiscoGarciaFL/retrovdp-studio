@@ -309,12 +309,18 @@ ApplicationWindow {
         objectName: "genesisCharacterExportDialog"
         title: editorProject.activeTargetInfo.objectProcessor
                ? qsTr("Export native object-processor assets")
+               : (editorProject.activeTargetInfo.displayAdapter
+                  || editorProject.activeTargetInfo.characterDisplayHardware)
+               ? qsTr("Export native display assets")
                : editorProject.activeTargetInfo.id === "sega-genesis-vdp"
                ? qsTr("Export native Genesis character assets")
                : qsTr("Export native Nintendo PPU assets")
         onAccepted: {
             if (editorProject.activeTargetInfo.objectProcessor)
                 editorProject.exportObjectProcessorEditorAssets(selectedFolder)
+            else if (editorProject.activeTargetInfo.displayAdapter
+                     || editorProject.activeTargetInfo.characterDisplayHardware)
+                editorProject.exportLegacyDisplayEditorAssets(selectedFolder)
             else if (editorProject.activeTargetInfo.id === "sega-genesis-vdp")
                 editorProject.exportGenesisCharacterAssets(selectedFolder)
             else
@@ -339,6 +345,9 @@ ApplicationWindow {
                       && editorProject.activeTargetInfo.id === "sega-genesis-vdp")
                   || ((window.workspaceMode === 1 || window.workspaceMode === 2)
                       && editorProject.activeTargetInfo.objectProcessor)
+                  || (window.workspaceMode === 1
+                      && (editorProject.activeTargetInfo.displayAdapter
+                          || editorProject.activeTargetInfo.characterDisplayHardware))
                  || ((window.workspaceMode === 1 || window.workspaceMode === 2)
                      && (editorProject.activeTargetInfo.id === "game-boy-ppu"
                          || editorProject.activeTargetInfo.id === "game-boy-color-ppu"

@@ -5,7 +5,7 @@
 </p>
 
 RetroVDP Studio is a cross-platform graphics workspace for classic video and
-object processors. It combines source preparation and conversion with
+object processors, display adapters, and character-display hardware. It combines source preparation and conversion with
 hardware-aware screen, object, character, pattern, palette, and sprite tools.
 
 The application is organized around three independent ideas:
@@ -27,7 +27,8 @@ The application is organized around three independent ideas:
 The current release implements TMS9918A, F18A, V9938, V9958, Sega Master
 System, Sega Genesis/Mega Drive, NEC/Hudson HuC6270, MOS VIC-II, MOS VIC,
 Nintendo Game Boy, Nintendo Game Boy Color, Super NES, Atari Lynx Suzy/Mikey,
-and SNK Neo Geo conversion profiles.
+SNK Neo Geo, Amstrad CPC, IBM CGA, IBM EGA, Apple IIe, Timex Sinclair
+1000/ZX81-class, and TRS-80 Model I/III conversion profiles.
 V9938 SCREEN 5–8 and V9958 SCREEN 10–12 are
 compiled through the registered Yamaha bitmap strategies, including
 programmable palette and YJK/YAE output. The Master System profile compiles

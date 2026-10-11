@@ -133,45 +133,45 @@
       "images": [{"local": "assets/targets/neo-geo/neo-geo-aes.png", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Neo-Geo-AES-Console-Set.png/960px-Neo-Geo-AES-Console-Set.png", "sourcePage": "https://commons.wikimedia.org/wiki/File:Neo-Geo-AES-Console-Set.png", "license": "CC BY-SA 3.0", "credit": "Evan-Amos / Wikimedia Commons"}]
     },
     {
-      "id": "amstrad-cpc", "name": "Amstrad CPC", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "id": "amstrad-cpc", "name": "Amstrad CPC", "category": "display-adapters", "kind": "Display adapter", "status": "implemented",
       "hardware": "Amstrad CPC 464/664/6128 home computers", "vramBytes": 16384,
       "modes": ["cpc-mode-0", "cpc-mode-1", "cpc-mode-2"],
-      "workspaces": {"screenImage": "planned Mode 0/1/2 screen conversion", "character": "planned software-defined character authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "workspaces": {"screenImage": "native Mode 0/1/2 conversion with CPC pixel packing, 16 KiB scanline interleave and ink export", "character": "software-defined 8x8 character authoring", "sprite": "not applicable; use software composition"},
       "images": [{"local": "assets/targets/amstrad-cpc/amstrad-cpc464.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Amstrad_CPC464.jpg/960px-Amstrad_CPC464.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Amstrad_CPC464.jpg", "license": "CC BY-SA 2.5", "credit": "Bill Bertram / Wikimedia Commons"}]
     },
     {
-      "id": "ibm-cga", "name": "IBM Color/Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "id": "ibm-cga", "name": "IBM Color/Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "implemented",
       "hardware": "IBM PC/XT-class systems with CGA and IBM 5153 display", "vramBytes": 16384,
       "modes": ["cga-text-40x25", "cga-text-80x25", "cga-320x200", "cga-640x200"],
-      "workspaces": {"screenImage": "planned CGA text and graphics conversion", "character": "planned ROM-font and text-buffer authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "workspaces": {"screenImage": "native 40/80-column text and 320/640-pixel graphics conversion with even/odd scanline banks", "character": "ROM-font and text-cell authoring", "sprite": "not applicable; use software composition"},
       "images": [{"local": "assets/targets/ibm-cga/ibm-pc-xt-5153.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/IBM_Personal_Computer_XT_with_5153_Color_Monitor_%2853998049768%29.jpg/960px-IBM_Personal_Computer_XT_with_5153_Color_Monitor_%2853998049768%29.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:IBM_Personal_Computer_XT_with_5153_Color_Monitor_(53998049768).jpg", "license": "CC BY-SA 2.0", "credit": "Ethan Long / Wikimedia Commons"}]
     },
     {
-      "id": "ibm-ega", "name": "IBM Enhanced Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "planned",
+      "id": "ibm-ega", "name": "IBM Enhanced Graphics Adapter", "category": "display-adapters", "kind": "Display adapter", "status": "implemented",
       "hardware": "IBM PC/AT-class systems with EGA and IBM 5154 display", "vramBytes": 262144,
       "modes": ["ega-text", "ega-320x200", "ega-640x350"],
-      "workspaces": {"screenImage": "planned planar 16-color EGA conversion", "character": "planned programmable-font and text-buffer authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "workspaces": {"screenImage": "native text and planar 16-color 320x200/640x350 conversion", "character": "programmable-font and text-cell authoring", "sprite": "not applicable; use software composition"},
       "images": [{"local": "assets/targets/ibm-ega/ibm-5154-monitors.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/IBM_5151%2C_5153%2C_5154_monitors.jpg/960px-IBM_5151%2C_5153%2C_5154_monitors.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:IBM_5151,_5153,_5154_monitors.jpg", "license": "CC0", "credit": "phreakindee (LGR) / Wikimedia Commons"}]
     },
     {
-      "id": "apple-iie", "name": "Apple IIe", "category": "display-adapters", "kind": "Display hardware", "status": "planned",
+      "id": "apple-iie", "name": "Apple IIe", "category": "display-adapters", "kind": "Display hardware", "status": "implemented",
       "hardware": "Apple IIe home computer and Monitor II", "vramBytes": 16384,
       "modes": ["apple-iie-text", "apple-iie-lores", "apple-iie-hires", "apple-iie-double-hires"],
-      "workspaces": {"screenImage": "planned text, lo-res, hi-res and double-hi-res conversion", "character": "planned text and shape-table authoring", "sprite": "not applicable; planned software sprite workflow"},
+      "workspaces": {"screenImage": "native text, lo-res, hi-res and double-hi-res page conversion with Apple memory addressing", "character": "7x8 text and shape authoring", "sprite": "not applicable; use software composition"},
       "images": [{"local": "assets/targets/apple-iie/apple-iie-system.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG/960px-Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG", "sourcePage": "https://commons.wikimedia.org/wiki/File:Apple_IIe_%2B_Disk_II_drives_%2B_Apple_Monitor_II.JPG", "license": "CC BY-SA 3.0", "credit": "Mystère Martin / Wikimedia Commons"}]
     },
     {
-      "id": "timex-ts1000", "name": "Timex Sinclair 1000 / ZX81-class", "category": "character-display", "kind": "Character display", "status": "planned",
+      "id": "timex-ts1000", "name": "Timex Sinclair 1000 / ZX81-class", "category": "character-display", "kind": "Character display", "status": "implemented",
       "hardware": "Timex Sinclair 1000 and Sinclair ZX81-class home computers", "vramBytes": 1024,
       "modes": ["zx81-text-32x24", "zx81-semigraphics-64x48"],
-      "workspaces": {"screenImage": "planned monochrome character-display conversion", "character": "planned ROM-glyph and display-file authoring", "sprite": "not applicable"},
+      "workspaces": {"screenImage": "native 32x24 text and 64x48 block-graphics conversion to a 793-byte display file", "character": "ROM-glyph and HALT-delimited display-file authoring", "sprite": "not applicable"},
       "images": [{"local": "assets/targets/timex-ts1000/timex-sinclair-1000.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Timex_Sinclair_1000.jpg/960px-Timex_Sinclair_1000.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Timex_Sinclair_1000.jpg", "license": "CC BY-SA 4.0", "credit": "Joho345 / Wikimedia Commons"}]
     },
     {
-      "id": "trs80-model1-3", "name": "TRS-80 Model I / III", "category": "character-display", "kind": "Character display", "status": "planned",
+      "id": "trs80-model1-3", "name": "TRS-80 Model I / III", "category": "character-display", "kind": "Character display", "status": "implemented",
       "hardware": "Tandy/Radio Shack TRS-80 Model I and Model III computers", "vramBytes": 1024,
       "modes": ["trs80-text-64x16", "trs80-semigraphics-128x48"],
-      "workspaces": {"screenImage": "planned text and semigraphics conversion", "character": "planned character-cell and semigraphics authoring", "sprite": "not applicable"},
+      "workspaces": {"screenImage": "native 64x16 text and 128x48 2x3 semigraphics conversion to 1 KiB VRAM", "character": "character-cell and semigraphics authoring", "sprite": "not applicable"},
       "images": [
         {"local": "assets/targets/trs80-model1-3/trs80-model-i.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Tandy_TRS-80_Model_I.jpg/960px-Tandy_TRS-80_Model_I.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:Tandy_TRS-80_Model_I.jpg", "license": "CC0", "credit": "Prolete / Wikimedia Commons"},
         {"local": "assets/targets/trs80-model1-3/trs80-model-iii.jpg", "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/TRS-80_Model_III.jpg/960px-TRS-80_Model_III.jpg", "sourcePage": "https://commons.wikimedia.org/wiki/File:TRS-80_Model_III.jpg", "license": "CC BY-SA 2.0", "credit": "Jeff Kubina / Wikimedia Commons"}

@@ -20,6 +20,8 @@ enum class TargetKind : std::uint8_t {
     VideoDisplayProcessor,
     PictureProcessor,
     ObjectProcessor,
+    DisplayAdapter,
+    CharacterDisplayHardware,
 };
 
 enum class PaletteModel : std::uint8_t {

@@ -60,6 +60,12 @@ QString previewName(int target)
     case 11: return QStringLiteral("super-nes-ppu");
     case 12: return QStringLiteral("atari-lynx");
     case 13: return QStringLiteral("neo-geo");
+    case 14: return QStringLiteral("amstrad-cpc");
+    case 15: return QStringLiteral("ibm-cga");
+    case 16: return QStringLiteral("ibm-ega");
+    case 17: return QStringLiteral("apple-iie");
+    case 18: return QStringLiteral("timex-ts1000");
+    case 19: return QStringLiteral("trs80-model1-3");
     default: return QStringLiteral("tms9918a");
     }
 }
@@ -157,6 +163,12 @@ QVariantList EditorProjectController::supportedTargets() const
     if (superNesEnabled_) append(retrovdp::core::TargetProfileId::SuperNes);
     if (atariLynxEnabled_) append(retrovdp::core::TargetProfileId::AtariLynx);
     if (neoGeoEnabled_) append(retrovdp::core::TargetProfileId::NeoGeo);
+    if (amstradCpcEnabled_) append(retrovdp::core::TargetProfileId::AmstradCpc);
+    if (ibmCgaEnabled_) append(retrovdp::core::TargetProfileId::IbmCga);
+    if (ibmEgaEnabled_) append(retrovdp::core::TargetProfileId::IbmEga);
+    if (appleIIeEnabled_) append(retrovdp::core::TargetProfileId::AppleIIe);
+    if (timexTs1000Enabled_) append(retrovdp::core::TargetProfileId::TimexTs1000);
+    if (trs80Enabled_) append(retrovdp::core::TargetProfileId::Trs80Model1_3);
     return result;
 }
 
@@ -214,6 +226,10 @@ QVariantMap EditorProjectController::activeTargetInfo() const
         {QStringLiteral("id"), QString::fromStdString(profile.stableId.value())},
         {QStringLiteral("objectProcessor"),
          profile.kind == retrovdp::core::TargetKind::ObjectProcessor},
+        {QStringLiteral("displayAdapter"),
+         profile.kind == retrovdp::core::TargetKind::DisplayAdapter},
+        {QStringLiteral("characterDisplayHardware"),
+         profile.kind == retrovdp::core::TargetKind::CharacterDisplayHardware},
         {QStringLiteral("objectScaling"),
          has(retrovdp::core::TargetCapability::ObjectScaling)},
         {QStringLiteral("objectChaining"),
@@ -223,6 +239,10 @@ QVariantMap EditorProjectController::activeTargetInfo() const
              ? QStringLiteral("Object processor")
          : profile.kind == retrovdp::core::TargetKind::PictureProcessor
              ? QStringLiteral("Picture processor")
+         : profile.kind == retrovdp::core::TargetKind::DisplayAdapter
+             ? QStringLiteral("Display adapter")
+         : profile.kind == retrovdp::core::TargetKind::CharacterDisplayHardware
+             ? QStringLiteral("Character display hardware")
              : QStringLiteral("Video display processor")},
         {QStringLiteral("implemented"),
          profile.status == retrovdp::core::TargetProfileStatus::Implemented},
@@ -355,7 +375,10 @@ bool EditorProjectController::targetEnabled(int value) const
         || (value == 6 && huc6270Enabled_) || (value == 7 && vicIiEnabled_)
         || (value == 8 && vicEnabled_) || (value == 9 && gameBoyEnabled_)
         || (value == 10 && gameBoyColorEnabled_) || (value == 11 && superNesEnabled_)
-        || (value == 12 && atariLynxEnabled_) || (value == 13 && neoGeoEnabled_);
+        || (value == 12 && atariLynxEnabled_) || (value == 13 && neoGeoEnabled_)
+        || (value == 14 && amstradCpcEnabled_) || (value == 15 && ibmCgaEnabled_)
+        || (value == 16 && ibmEgaEnabled_) || (value == 17 && appleIIeEnabled_)
+        || (value == 18 && timexTs1000Enabled_) || (value == 19 && trs80Enabled_);
 }
 
 void EditorProjectController::setProjectName(const QString& value)
@@ -1046,11 +1069,19 @@ void EditorProjectController::configureProjectWithTargets(
     superNesEnabled_ = plannedTargetIds.contains(QStringLiteral("super-nes-ppu"));
     atariLynxEnabled_ = plannedTargetIds.contains(QStringLiteral("atari-lynx"));
     neoGeoEnabled_ = plannedTargetIds.contains(QStringLiteral("neo-geo"));
+    amstradCpcEnabled_ = plannedTargetIds.contains(QStringLiteral("amstrad-cpc"));
+    ibmCgaEnabled_ = plannedTargetIds.contains(QStringLiteral("ibm-cga"));
+    ibmEgaEnabled_ = plannedTargetIds.contains(QStringLiteral("ibm-ega"));
+    appleIIeEnabled_ = plannedTargetIds.contains(QStringLiteral("apple-iie"));
+    timexTs1000Enabled_ = plannedTargetIds.contains(QStringLiteral("timex-ts1000"));
+    trs80Enabled_ = plannedTargetIds.contains(QStringLiteral("trs80-model1-3"));
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
         && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
         && !gameBoyColorEnabled_ && !superNesEnabled_ && !atariLynxEnabled_
-        && !neoGeoEnabled_) {
+        && !neoGeoEnabled_ && !amstradCpcEnabled_ && !ibmCgaEnabled_
+        && !ibmEgaEnabled_ && !appleIIeEnabled_ && !timexTs1000Enabled_
+        && !trs80Enabled_) {
         tms9918aEnabled_ = true;
     }
     plannedTargetIds_.clear();
@@ -1070,6 +1101,12 @@ void EditorProjectController::configureProjectWithTargets(
             && id != QStringLiteral("super-nes-ppu")
             && id != QStringLiteral("atari-lynx")
             && id != QStringLiteral("neo-geo")
+            && id != QStringLiteral("amstrad-cpc")
+            && id != QStringLiteral("ibm-cga")
+            && id != QStringLiteral("ibm-ega")
+            && id != QStringLiteral("apple-iie")
+            && id != QStringLiteral("timex-ts1000")
+            && id != QStringLiteral("trs80-model1-3")
             && !plannedTargetIds_.contains(id)) {
             plannedTargetIds_.push_back(id);
         }
@@ -1080,7 +1117,7 @@ void EditorProjectController::configureProjectWithTargets(
     }
     if (!targetEnabled(activeTarget())) {
         int fallback = 0;
-        for (int candidate = 0; candidate <= 13; ++candidate) {
+        for (int candidate = 0; candidate <= 19; ++candidate) {
             if (targetEnabled(candidate)) {
                 fallback = candidate;
                 break;
@@ -2593,6 +2630,12 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
     if (superNesEnabled_) projectTargets.push_back(QStringLiteral("super-nes-ppu"));
     if (atariLynxEnabled_) projectTargets.push_back(QStringLiteral("atari-lynx"));
     if (neoGeoEnabled_) projectTargets.push_back(QStringLiteral("neo-geo"));
+    if (amstradCpcEnabled_) projectTargets.push_back(QStringLiteral("amstrad-cpc"));
+    if (ibmCgaEnabled_) projectTargets.push_back(QStringLiteral("ibm-cga"));
+    if (ibmEgaEnabled_) projectTargets.push_back(QStringLiteral("ibm-ega"));
+    if (appleIIeEnabled_) projectTargets.push_back(QStringLiteral("apple-iie"));
+    if (timexTs1000Enabled_) projectTargets.push_back(QStringLiteral("timex-ts1000"));
+    if (trs80Enabled_) projectTargets.push_back(QStringLiteral("trs80-model1-3"));
     for (const QString& targetId : plannedTargetIds_)
         projectTargets.push_back(targetId);
 
@@ -2637,7 +2680,19 @@ bool EditorProjectController::saveRecipe(const QUrl& fileUrl)
                      {QStringLiteral("atari-lynx"),
                       QJsonObject{{QStringLiteral("enabled"), atariLynxEnabled_}}},
                      {QStringLiteral("neo-geo"),
-                      QJsonObject{{QStringLiteral("enabled"), neoGeoEnabled_}}}}},
+                      QJsonObject{{QStringLiteral("enabled"), neoGeoEnabled_}}},
+                     {QStringLiteral("amstrad-cpc"),
+                      QJsonObject{{QStringLiteral("enabled"), amstradCpcEnabled_}}},
+                     {QStringLiteral("ibm-cga"),
+                      QJsonObject{{QStringLiteral("enabled"), ibmCgaEnabled_}}},
+                     {QStringLiteral("ibm-ega"),
+                      QJsonObject{{QStringLiteral("enabled"), ibmEgaEnabled_}}},
+                     {QStringLiteral("apple-iie"),
+                      QJsonObject{{QStringLiteral("enabled"), appleIIeEnabled_}}},
+                     {QStringLiteral("timex-ts1000"),
+                      QJsonObject{{QStringLiteral("enabled"), timexTs1000Enabled_}}},
+                     {QStringLiteral("trs80-model1-3"),
+                      QJsonObject{{QStringLiteral("enabled"), trs80Enabled_}}}}},
         {QStringLiteral("preview"), previewName(previewTarget_)},
         {QStringLiteral("editScope"), editScope_ == 1
                                              ? QStringLiteral("f18a-enhancements")
@@ -2755,6 +2810,12 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         superNesEnabled_ = configuredTargets.contains(QStringLiteral("super-nes-ppu"));
         atariLynxEnabled_ = configuredTargets.contains(QStringLiteral("atari-lynx"));
         neoGeoEnabled_ = configuredTargets.contains(QStringLiteral("neo-geo"));
+        amstradCpcEnabled_ = configuredTargets.contains(QStringLiteral("amstrad-cpc"));
+        ibmCgaEnabled_ = configuredTargets.contains(QStringLiteral("ibm-cga"));
+        ibmEgaEnabled_ = configuredTargets.contains(QStringLiteral("ibm-ega"));
+        appleIIeEnabled_ = configuredTargets.contains(QStringLiteral("apple-iie"));
+        timexTs1000Enabled_ = configuredTargets.contains(QStringLiteral("timex-ts1000"));
+        trs80Enabled_ = configuredTargets.contains(QStringLiteral("trs80-model1-3"));
         plannedTargetIds_.clear();
         for (const QJsonValue& targetValue : configuredTargets) {
             const QString targetId = targetValue.toString().trimmed();
@@ -2772,6 +2833,12 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                 && targetId != QStringLiteral("super-nes-ppu")
                 && targetId != QStringLiteral("atari-lynx")
                 && targetId != QStringLiteral("neo-geo")
+                && targetId != QStringLiteral("amstrad-cpc")
+                && targetId != QStringLiteral("ibm-cga")
+                && targetId != QStringLiteral("ibm-ega")
+                && targetId != QStringLiteral("apple-iie")
+                && targetId != QStringLiteral("timex-ts1000")
+                && targetId != QStringLiteral("trs80-model1-3")
                 && !plannedTargetIds_.contains(targetId)) {
                 plannedTargetIds_.push_back(targetId);
             }
@@ -2812,16 +2879,30 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                                 .value(QStringLiteral("enabled")).toBool(false);
         neoGeoEnabled_ = profiles.value(QStringLiteral("neo-geo")).toObject()
                              .value(QStringLiteral("enabled")).toBool(false);
+        amstradCpcEnabled_ = profiles.value(QStringLiteral("amstrad-cpc")).toObject()
+                                  .value(QStringLiteral("enabled")).toBool(false);
+        ibmCgaEnabled_ = profiles.value(QStringLiteral("ibm-cga")).toObject()
+                             .value(QStringLiteral("enabled")).toBool(false);
+        ibmEgaEnabled_ = profiles.value(QStringLiteral("ibm-ega")).toObject()
+                             .value(QStringLiteral("enabled")).toBool(false);
+        appleIIeEnabled_ = profiles.value(QStringLiteral("apple-iie")).toObject()
+                               .value(QStringLiteral("enabled")).toBool(false);
+        timexTs1000Enabled_ = profiles.value(QStringLiteral("timex-ts1000")).toObject()
+                                  .value(QStringLiteral("enabled")).toBool(false);
+        trs80Enabled_ = profiles.value(QStringLiteral("trs80-model1-3")).toObject()
+                            .value(QStringLiteral("enabled")).toBool(false);
     }
     if (!tms9918aEnabled_ && !f18aEnabled_ && !v9938Enabled_ && !v9958Enabled_
         && !segaSmsEnabled_ && !segaGenesisEnabled_ && !huc6270Enabled_
         && !vicIiEnabled_ && !vicEnabled_ && !gameBoyEnabled_
         && !gameBoyColorEnabled_ && !superNesEnabled_ && !atariLynxEnabled_
-        && !neoGeoEnabled_)
+        && !neoGeoEnabled_ && !amstradCpcEnabled_ && !ibmCgaEnabled_
+        && !ibmEgaEnabled_ && !appleIIeEnabled_ && !timexTs1000Enabled_
+        && !trs80Enabled_)
         tms9918aEnabled_ = true;
     if (!targetEnabled(activeTarget())) {
         int fallbackTarget = 0;
-        for (int candidate = 0; candidate <= 13; ++candidate) {
+        for (int candidate = 0; candidate <= 19; ++candidate) {
             if (targetEnabled(candidate)) {
                 fallbackTarget = candidate;
                 break;
@@ -2968,6 +3049,9 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                                   8, 1024);
     spritePlacementMode_ = sprite.value(QStringLiteral("placementMode")).toBool();
     spriteSets_.clear();
+    const int savedSpritePixelMaximum = usesIndexedSpriteEditor()
+        ? (1 << activeSpriteColorDepth()) - 1
+        : editScope_ == 1 ? 7 : 1;
     const QJsonArray savedSpriteSets = sprite.value(QStringLiteral("sets")).toArray();
     for (int setIndex = 0;
          setIndex < std::min(32, static_cast<int>(savedSpriteSets.size())); ++setIndex) {
@@ -2975,9 +3059,8 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
         SpriteSet set = makeSpriteSet(setIndex + 1);
         const QString name = savedSet.value(QStringLiteral("name")).toString();
         if (!name.isEmpty()) set.name = name;
-        const auto loadSpriteBank = [this](const QJsonArray& saved,
-                                           auto& patterns,
-                                           int pixelCount) {
+        const auto loadSpriteBank = [savedSpritePixelMaximum](
+            const QJsonArray& saved, auto& patterns, int pixelCount) {
             const int count = pixelCount;
             for (const QJsonValue& value : saved) {
                 const QJsonObject object = value.toObject();
@@ -3003,7 +3086,7 @@ bool EditorProjectController::loadRecipe(const QUrl& fileUrl)
                         pattern.f18aPixels[static_cast<std::size_t>(pixel)] =
                             static_cast<std::uint8_t>(std::clamp(
                             enhanced[pixel].toInt(), 0,
-                            (1 << activeSpriteColorDepth()) - 1));
+                            savedSpritePixelMaximum));
                     }
                 }
             }

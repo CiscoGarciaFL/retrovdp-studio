@@ -58,7 +58,9 @@ Dialog {
                           segaSmsTarget, segaGenesisTarget, huc6270Target,
                           vicIiTarget, vicTarget, gameBoyTarget,
                           gameBoyColorTarget, superNesTarget,
-                          atariLynxTarget, neoGeoTarget]
+                          atariLynxTarget, neoGeoTarget, amstradCpcTarget,
+                          ibmCgaTarget, ibmEgaTarget, appleIieTarget,
+                          timexTarget, trs80Target]
         let count = 0
         for (let index = 0; index < controls.length; ++index) {
             if (controls[index].checked)
@@ -96,6 +98,12 @@ Dialog {
         superNesTarget.checked = editorProject.superNesEnabled
         atariLynxTarget.checked = editorProject.atariLynxEnabled
         neoGeoTarget.checked = editorProject.neoGeoEnabled
+        amstradCpcTarget.checked = editorProject.amstradCpcEnabled
+        ibmCgaTarget.checked = editorProject.ibmCgaEnabled
+        ibmEgaTarget.checked = editorProject.ibmEgaEnabled
+        appleIieTarget.checked = editorProject.appleIIeEnabled
+        timexTarget.checked = editorProject.timexTs1000Enabled
+        trs80Target.checked = editorProject.trs80Enabled
         open()
         projectNameField.forceActiveFocus()
     }
@@ -256,26 +264,26 @@ Dialog {
             CheckBox {
                 id: amstradCpcTarget
                 objectName: "amstradCpcProjectTarget"
-                text: qsTr("Amstrad CPC — Planned")
-                enabled: false
+                text: qsTr("Amstrad CPC")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: ibmCgaTarget
                 objectName: "ibmCgaProjectTarget"
-                text: qsTr("IBM CGA — Research")
-                enabled: false
+                text: qsTr("IBM CGA")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: ibmEgaTarget
                 objectName: "ibmEgaProjectTarget"
-                text: qsTr("IBM EGA — Research")
-                enabled: false
+                text: qsTr("IBM EGA")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: appleIieTarget
                 objectName: "appleIieProjectTarget"
-                text: qsTr("Apple IIe — Research")
-                enabled: false
+                text: qsTr("Apple IIe")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
 
             Label {
@@ -286,14 +294,14 @@ Dialog {
             CheckBox {
                 id: timexTarget
                 objectName: "timexTs1000ProjectTarget"
-                text: qsTr("Timex Sinclair 1000 / ZX81-class — Research")
-                enabled: false
+                text: qsTr("Timex Sinclair 1000 / ZX81-class")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
             CheckBox {
                 id: trs80Target
                 objectName: "trs80ProjectTarget"
-                text: qsTr("TRS-80 Model I / III — Research")
-                enabled: false
+                text: qsTr("TRS-80 Model I / III")
+                enabled: !checked || root.selectedImplementedTargetCount() > 1
             }
 
             Label {

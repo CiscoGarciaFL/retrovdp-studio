@@ -1798,6 +1798,53 @@ void testEditorProjectRecipe(TestContext& test)
                            QStringLiteral("NEO_GEO_OBJECTS.PAL"))).size() == 8192,
                 "Neo Geo editors should expose FIX and tall object-strip limits with native VRAM export");
 
+    ImageInputController legacyDisplayImage;
+    legacyDisplayImage.setAutoUpdate(false);
+    EditorProjectController legacyDisplayProject(&legacyDisplayImage);
+    legacyDisplayProject.configureProjectWithTargets(
+        QStringLiteral("Legacy Displays"), false, false,
+        QStringList{QStringLiteral("amstrad-cpc"), QStringLiteral("ibm-cga"),
+                    QStringLiteral("ibm-ega"), QStringLiteral("apple-iie"),
+                    QStringLiteral("timex-ts1000"), QStringLiteral("trs80-model1-3")});
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::TimexTs1000));
+    const auto zx81Info = legacyDisplayProject.activeTargetInfo();
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::IbmEga));
+    const auto egaInfo = legacyDisplayProject.activeTargetInfo();
+    QTemporaryDir legacyDisplayDirectory;
+    const bool egaExported = legacyDisplayDirectory.isValid()
+        && legacyDisplayProject.exportLegacyDisplayEditorAssets(
+            QUrl::fromLocalFile(legacyDisplayDirectory.path()));
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::TimexTs1000));
+    const bool zx81Exported = legacyDisplayProject.exportLegacyDisplayEditorAssets(
+        QUrl::fromLocalFile(legacyDisplayDirectory.path()));
+    test.expect(legacyDisplayProject.amstradCpcEnabled()
+                    && legacyDisplayProject.ibmCgaEnabled()
+                    && legacyDisplayProject.ibmEgaEnabled()
+                    && legacyDisplayProject.appleIIeEnabled()
+                    && legacyDisplayProject.timexTs1000Enabled()
+                    && legacyDisplayProject.trs80Enabled()
+                    && legacyDisplayProject.supportedTargets().size() == 6
+                    && zx81Info.value(QStringLiteral("characterDisplayHardware")).toBool()
+                    && !zx81Info.value(QStringLiteral("sprites")).toBool()
+                    && egaInfo.value(QStringLiteral("displayAdapter")).toBool()
+                    && egaInfo.value(QStringLiteral("targetKind")).toString()
+                        == QStringLiteral("Display adapter")
+                    && legacyDisplayProject.screenImageModeAvailable()
+                    && legacyDisplayProject.characterModeAvailable()
+                    && !legacyDisplayProject.spriteModeAvailable()
+                    && egaExported
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("EGA_FONT.CHR"))).size() == 2048
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("EGA_TEXT.VRAM"))).size() == 4000
+                    && zx81Exported
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("ZX81_DISPLAY.DFILE"))).size() == 793,
+                "adapter and character-display project targets should enable native screen and character workspaces without hardware sprites");
+
     ImageInputController recipeImage;
     recipeImage.setAutoUpdate(false);
     recipeImage.openUrl(QUrl::fromLocalFile(goldenSource(u"source/tiny-rgba.png")));
@@ -2764,7 +2811,7 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && targetSupportDialog->property("catalogReady").toBool()
                     && targetSupportDialog->property("targetCount").toInt() == 20
                     && targetSupportDialog->property("categoryCount").toInt() == 5
-                    && targetSupportDialog->property("plannedTargetCount").toInt() == 6,
+                    && targetSupportDialog->property("plannedTargetCount").toInt() == 0,
                 "Help should expose all 20 bundled Supported Targets entries immediately");
     QObject* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
     const bool aboutOpened = aboutAction != nullptr
@@ -4828,7 +4875,7 @@ void testTargetSupportDeliverables(TestContext& test)
                 && !imageEntry.value(QStringLiteral("credit")).toString().isEmpty();
         }
     }
-    test.expect(complete && plannedCount == 6 && imageCount == 29,
+    test.expect(complete && plannedCount == 0 && imageCount == 29,
                 "all 20 target summaries and 29 bundled offline photographs should be complete and decodable");
 }
 

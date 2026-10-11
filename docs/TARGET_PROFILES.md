@@ -22,8 +22,9 @@ source library
 
 TMS9918A, F18A, V9938, V9958, Sega Master System, Sega Genesis/Mega Drive,
 NEC/Hudson HuC6270, MOS VIC-II, MOS VIC, Nintendo Game Boy, Nintendo Game Boy
-Color, Super NES, Atari Lynx Suzy/Mikey, and SNK Neo Geo are implemented target
-profiles.
+Color, Super NES, Atari Lynx Suzy/Mikey, SNK Neo Geo, Amstrad CPC, IBM CGA,
+IBM EGA, Apple IIe, Timex Sinclair 1000/ZX81-class, and TRS-80 Model I/III are
+implemented target profiles.
 The Yamaha profiles expose their native bitmap modes through the
 same registered target contract. The Master System profile exposes native
 Mode 4 at 256×192, 256×224, and PAL 256×240, with RGB222 CRAM, planar tile,
@@ -45,6 +46,9 @@ exposes 320×224 FIX and chained-object conversions, 8×8 FIX characters,
 attribute export. Object-processor targets label their primary workspaces as
 Object Scene and Object Editor rather than treating them as background-first
 VDPs.
+The display-adapter profiles emit native CPC-interleaved, CGA-banked,
+EGA-planar, and Apple IIe page-addressed memory. The character-display profiles
+emit ZX81 HALT-delimited display files and TRS-80 1 KiB text/semigraphics VRAM.
 Additional profiles must use that contract rather than adding unrelated UI
 modes.
 
