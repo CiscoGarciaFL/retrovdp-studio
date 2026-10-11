@@ -46,7 +46,8 @@ summary.
 
 The implemented target names are `tms9918a`, `f18a`, `v9938`, `v9958`,
 `sega-sms-vdp`, `sega-genesis-vdp`, `huc6270`, `vic-ii`, `vic`,
-`game-boy-ppu`, `game-boy-color-ppu`, and `super-nes-ppu`. The default target is `tms9918a`; the default mode is
+`game-boy-ppu`, `game-boy-color-ppu`, `super-nes-ppu`, `atari-lynx`, and
+`neo-geo`. The default target is `tms9918a`; the default mode is
 `bitmap-9918a`, the default preset is `balanced`, and the default format is
 `tifiles`. A target accepts only modes declared compatible by its profile.
 
@@ -88,10 +89,18 @@ Supported modes are:
 - `super-nes-mode-0-background`
 - `super-nes-mode-1-background`
 - `super-nes-mode-3-background`
+- `atari-lynx-object-scene`
+- `neo-geo-fix-layer`
+- `neo-geo-chained-sprites`
 
 Master System Mode 4 supports `raw` and `png` export. A RAW manifest contains
 `.TILES` planar pattern data, a `.MAP` name table, `.PAL` RGB222 CRAM bytes,
 and `.REG` values for VDP registers 0–10.
+
+Object-processor RAW export uses native asset suffixes. Lynx output contains
+`.SPR` literal line data, `.SCB`, `.PAL`, and `.REG`; Neo Geo FIX output uses
+`.FIX`, `.FIXMAP`, `.PAL`, and `.REG`, while chained-object output uses `.SPR`,
+`.VRAM`, `.PAL`, and `.REG`.
 
 Genesis Mode V supports `raw` and `png` export. A RAW manifest contains
 `.TILES` packed-nibble pattern data, a big-endian `.MAP` Plane A name table,

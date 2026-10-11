@@ -19,6 +19,9 @@ enum class TargetProfileStatus : std::uint8_t {
 enum class TargetKind : std::uint8_t {
     VideoDisplayProcessor,
     PictureProcessor,
+    ObjectProcessor,
+    DisplayAdapter,
+    CharacterDisplayHardware,
 };
 
 enum class PaletteModel : std::uint8_t {
@@ -111,6 +114,9 @@ enum class TargetCapability : std::uint32_t {
     SpriteMode2 = 1U << 8U,
     HorizontalScroll = 1U << 9U,
     YjkColor = 1U << 10U,
+    ObjectLists = 1U << 11U,
+    ObjectScaling = 1U << 12U,
+    ObjectChaining = 1U << 13U,
 };
 
 [[nodiscard]] constexpr TargetCapability operator|(TargetCapability left,

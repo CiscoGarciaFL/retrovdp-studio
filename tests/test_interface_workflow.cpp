@@ -1731,6 +1731,120 @@ void testEditorProjectRecipe(TestContext& test)
                            .value(QStringLiteral("pixels")).toList().at(0).toInt() == 255,
                 "Super NES editors and export should retain mode-selected planar tiles, CGRAM, and 128-entry OAM");
 
+    ImageInputController lynxImage;
+    lynxImage.setAutoUpdate(false);
+    EditorProjectController lynxProject(&lynxImage);
+    lynxProject.configureProjectWithTargets(
+        QStringLiteral("Lynx Objects"), false, false,
+        QStringList{QStringLiteral("atari-lynx")});
+    lynxProject.setActiveSpriteSize(3264);
+    lynxProject.setActiveSpritePaletteBank(0);
+    lynxProject.setActiveObjectHorizontalScale(125);
+    lynxProject.setActiveObjectVerticalScale(150);
+    QTemporaryDir lynxDirectory;
+    const bool lynxExported = lynxDirectory.isValid()
+        && lynxProject.exportObjectProcessorEditorAssets(
+            QUrl::fromLocalFile(lynxDirectory.path()));
+    test.expect(lynxProject.atariLynxEnabled()
+                    && lynxProject.activeTargetInfo()
+                           .value(QStringLiteral("objectProcessor")).toBool()
+                    && lynxProject.spritePatternWidth(3264) == 32
+                    && lynxProject.spritePatternHeight(3264) == 64
+                    && lynxProject.activeObjectHorizontalScale() == 125
+                    && lynxProject.activeObjectVerticalScale() == 150
+                    && lynxExported
+                    && QFileInfo(lynxDirectory.filePath(
+                           QStringLiteral("LYNX_OBJECTS.SCB"))).size() == 128 * 23
+                    && QFileInfo(lynxDirectory.filePath(
+                           QStringLiteral("LYNX_OBJECTS.PAL"))).size() == 32
+                    && QFileInfo(lynxDirectory.filePath(
+                           QStringLiteral("LYNX_OBJECTS.REG"))).size() == 16,
+                "Atari Lynx Object Editor should preserve variable dimensions and export linked SCBs");
+
+    ImageInputController neoGeoImage;
+    neoGeoImage.setAutoUpdate(false);
+    EditorProjectController neoGeoProject(&neoGeoImage);
+    neoGeoProject.configureProjectWithTargets(
+        QStringLiteral("Neo Geo Objects"), false, false,
+        QStringList{QStringLiteral("neo-geo")});
+    neoGeoProject.setActiveSprite(1);
+    neoGeoProject.setActiveSpriteSize(512);
+    neoGeoProject.setActiveSpritePaletteBank(255);
+    neoGeoProject.setActiveObjectHorizontalScale(50);
+    neoGeoProject.setActiveObjectVerticalScale(75);
+    neoGeoProject.setActiveObjectChained(true);
+    neoGeoProject.setActiveObjectFlipY(true);
+    QTemporaryDir neoGeoDirectory;
+    const bool neoGeoExported = neoGeoDirectory.isValid()
+        && neoGeoProject.exportObjectProcessorEditorAssets(
+            QUrl::fromLocalFile(neoGeoDirectory.path()));
+    test.expect(neoGeoProject.neoGeoEnabled()
+                    && neoGeoProject.characterPatternsPerSet() == 4096
+                    && neoGeoProject.spritePatternWidth(512) == 16
+                    && neoGeoProject.spritePatternHeight(512) == 512
+                    && neoGeoProject.activeSpritePaletteBank() == 255
+                    && neoGeoProject.activeObjectHorizontalScale() == 50
+                    && neoGeoProject.activeObjectVerticalScale() == 75
+                    && neoGeoProject.activeObjectChained()
+                    && neoGeoProject.activeObjectFlipY()
+                    && neoGeoExported
+                    && QFileInfo(neoGeoDirectory.filePath(
+                           QStringLiteral("NEO_GEO_OBJECTS.VRAM"))).size() == 0x8600 * 2
+                    && QFileInfo(neoGeoDirectory.filePath(
+                           QStringLiteral("NEO_GEO_OBJECTS.FIX"))).size() == 4096 * 32
+                    && QFileInfo(neoGeoDirectory.filePath(
+                           QStringLiteral("NEO_GEO_OBJECTS.FIXMAP"))).size() == 8192
+                    && QFileInfo(neoGeoDirectory.filePath(
+                           QStringLiteral("NEO_GEO_OBJECTS.PAL"))).size() == 8192,
+                "Neo Geo editors should expose FIX and tall object-strip limits with native VRAM export");
+
+    ImageInputController legacyDisplayImage;
+    legacyDisplayImage.setAutoUpdate(false);
+    EditorProjectController legacyDisplayProject(&legacyDisplayImage);
+    legacyDisplayProject.configureProjectWithTargets(
+        QStringLiteral("Legacy Displays"), false, false,
+        QStringList{QStringLiteral("amstrad-cpc"), QStringLiteral("ibm-cga"),
+                    QStringLiteral("ibm-ega"), QStringLiteral("apple-iie"),
+                    QStringLiteral("timex-ts1000"), QStringLiteral("trs80-model1-3")});
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::TimexTs1000));
+    const auto zx81Info = legacyDisplayProject.activeTargetInfo();
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::IbmEga));
+    const auto egaInfo = legacyDisplayProject.activeTargetInfo();
+    QTemporaryDir legacyDisplayDirectory;
+    const bool egaExported = legacyDisplayDirectory.isValid()
+        && legacyDisplayProject.exportLegacyDisplayEditorAssets(
+            QUrl::fromLocalFile(legacyDisplayDirectory.path()));
+    legacyDisplayProject.setActiveTarget(
+        static_cast<int>(retrovdp::core::TargetProfileId::TimexTs1000));
+    const bool zx81Exported = legacyDisplayProject.exportLegacyDisplayEditorAssets(
+        QUrl::fromLocalFile(legacyDisplayDirectory.path()));
+    test.expect(legacyDisplayProject.amstradCpcEnabled()
+                    && legacyDisplayProject.ibmCgaEnabled()
+                    && legacyDisplayProject.ibmEgaEnabled()
+                    && legacyDisplayProject.appleIIeEnabled()
+                    && legacyDisplayProject.timexTs1000Enabled()
+                    && legacyDisplayProject.trs80Enabled()
+                    && legacyDisplayProject.supportedTargets().size() == 6
+                    && zx81Info.value(QStringLiteral("characterDisplayHardware")).toBool()
+                    && !zx81Info.value(QStringLiteral("sprites")).toBool()
+                    && egaInfo.value(QStringLiteral("displayAdapter")).toBool()
+                    && egaInfo.value(QStringLiteral("targetKind")).toString()
+                        == QStringLiteral("Display adapter")
+                    && legacyDisplayProject.screenImageModeAvailable()
+                    && legacyDisplayProject.characterModeAvailable()
+                    && !legacyDisplayProject.spriteModeAvailable()
+                    && egaExported
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("EGA_FONT.CHR"))).size() == 2048
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("EGA_TEXT.VRAM"))).size() == 4000
+                    && zx81Exported
+                    && QFileInfo(legacyDisplayDirectory.filePath(
+                           QStringLiteral("ZX81_DISPLAY.DFILE"))).size() == 793,
+                "adapter and character-display project targets should enable native screen and character workspaces without hardware sprites");
+
     ImageInputController recipeImage;
     recipeImage.setAutoUpdate(false);
     recipeImage.openUrl(QUrl::fromLocalFile(goldenSource(u"source/tiny-rgba.png")));
@@ -2697,7 +2811,7 @@ void testResponsiveQml(TestContext& test, ImageInputController& controller)
                     && targetSupportDialog->property("catalogReady").toBool()
                     && targetSupportDialog->property("targetCount").toInt() == 20
                     && targetSupportDialog->property("categoryCount").toInt() == 5
-                    && targetSupportDialog->property("plannedTargetCount").toInt() == 8,
+                    && targetSupportDialog->property("plannedTargetCount").toInt() == 0,
                 "Help should expose all 20 bundled Supported Targets entries immediately");
     QObject* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
     const bool aboutOpened = aboutAction != nullptr
@@ -4761,7 +4875,7 @@ void testTargetSupportDeliverables(TestContext& test)
                 && !imageEntry.value(QStringLiteral("credit")).toString().isEmpty();
         }
     }
-    test.expect(complete && plannedCount == 8 && imageCount == 29,
+    test.expect(complete && plannedCount == 0 && imageCount == 29,
                 "all 20 target summaries and 29 bundled offline photographs should be complete and decodable");
 }
 

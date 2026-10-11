@@ -90,6 +90,32 @@ constexpr std::array superNesModes{
     ConversionMode::SuperNesMode1Background,
     ConversionMode::SuperNesMode3Background,
 };
+constexpr std::array atariLynxModes{ConversionMode::AtariLynxObjectScene};
+constexpr std::array neoGeoModes{
+    ConversionMode::NeoGeoFixLayer,
+    ConversionMode::NeoGeoChainedSprites,
+};
+constexpr std::array amstradCpcModes{
+    ConversionMode::CpcMode0, ConversionMode::CpcMode1, ConversionMode::CpcMode2,
+};
+constexpr std::array ibmCgaModes{
+    ConversionMode::CgaText40x25, ConversionMode::CgaText80x25,
+    ConversionMode::CgaGraphics320x200, ConversionMode::CgaGraphics640x200,
+};
+constexpr std::array ibmEgaModes{
+    ConversionMode::EgaText, ConversionMode::EgaGraphics320x200,
+    ConversionMode::EgaGraphics640x350,
+};
+constexpr std::array appleIIeModes{
+    ConversionMode::AppleIIeText, ConversionMode::AppleIIeLores,
+    ConversionMode::AppleIIeHires, ConversionMode::AppleIIeDoubleHires,
+};
+constexpr std::array timexTs1000Modes{
+    ConversionMode::Zx81Text32x24, ConversionMode::Zx81Semigraphics64x48,
+};
+constexpr std::array trs80Modes{
+    ConversionMode::Trs80Text64x16, ConversionMode::Trs80Semigraphics128x48,
+};
 
 constexpr TargetCapability commonCapabilities =
     TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
@@ -324,6 +350,84 @@ const std::array modes{
                           {256, 224, {8, 7}},
                           {PaletteModel::ProgrammableRgb, 256, 256, 5},
                           ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::AtariLynxObjectScene,
+                          mustId<ModeId>("atari-lynx-object-scene"),
+                          "Atari Lynx Suzy Object Scene (160x102)",
+                          TargetProfileId::AtariLynx,
+                          {160, 102, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 16, 16, 4},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::NeoGeoFixLayer,
+                          mustId<ModeId>("neo-geo-fix-layer"),
+                          "Neo Geo FIX Layer (320x224)",
+                          TargetProfileId::NeoGeo,
+                          {320, 224, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 4096, 240, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::NeoGeoChainedSprites,
+                          mustId<ModeId>("neo-geo-chained-sprites"),
+                          "Neo Geo Chained Sprite Scene (320x224)",
+                          TargetProfileId::NeoGeo,
+                          {320, 224, {1, 1}},
+                          {PaletteModel::ProgrammableRgb, 4096, 240, 5},
+                          ModeOption::PaletteSelection},
+    DisplayModeDescriptor{ConversionMode::CpcMode0, mustId<ModeId>("cpc-mode-0"),
+                          "Amstrad CPC Mode 0 (160x200, 16 colors)",
+                          TargetProfileId::AmstradCpc, {160, 200, {2, 1}},
+                          {PaletteModel::Fixed, 27, 16, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CpcMode1, mustId<ModeId>("cpc-mode-1"),
+                          "Amstrad CPC Mode 1 (320x200, 4 colors)",
+                          TargetProfileId::AmstradCpc, {320, 200, {1, 1}},
+                          {PaletteModel::Fixed, 27, 4, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CpcMode2, mustId<ModeId>("cpc-mode-2"),
+                          "Amstrad CPC Mode 2 (640x200, 2 colors)",
+                          TargetProfileId::AmstradCpc, {640, 200, {1, 2}},
+                          {PaletteModel::Fixed, 27, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CgaText40x25, mustId<ModeId>("cga-text-40x25"),
+                          "CGA Text 40x25", TargetProfileId::IbmCga,
+                          {320, 200, {6, 5}}, {PaletteModel::Fixed, 16, 16, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CgaText80x25, mustId<ModeId>("cga-text-80x25"),
+                          "CGA Text 80x25", TargetProfileId::IbmCga,
+                          {640, 200, {3, 5}}, {PaletteModel::Fixed, 16, 16, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CgaGraphics320x200, mustId<ModeId>("cga-320x200"),
+                          "CGA Graphics 320x200 (4 colors)", TargetProfileId::IbmCga,
+                          {320, 200, {6, 5}}, {PaletteModel::Fixed, 16, 4, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::CgaGraphics640x200, mustId<ModeId>("cga-640x200"),
+                          "CGA Graphics 640x200 (monochrome)", TargetProfileId::IbmCga,
+                          {640, 200, {3, 5}}, {PaletteModel::Fixed, 16, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::EgaText, mustId<ModeId>("ega-text"),
+                          "EGA Text 80x25", TargetProfileId::IbmEga,
+                          {640, 350, {3, 4}}, {PaletteModel::ProgrammableRgb, 64, 16, 2}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::EgaGraphics320x200, mustId<ModeId>("ega-320x200"),
+                          "EGA Graphics 320x200 (16 colors)", TargetProfileId::IbmEga,
+                          {320, 200, {6, 5}}, {PaletteModel::ProgrammableRgb, 64, 16, 2}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::EgaGraphics640x350, mustId<ModeId>("ega-640x350"),
+                          "EGA Graphics 640x350 (16 colors)", TargetProfileId::IbmEga,
+                          {640, 350, {3, 4}}, {PaletteModel::ProgrammableRgb, 64, 16, 2}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::AppleIIeText, mustId<ModeId>("apple-iie-text"),
+                          "Apple IIe Text 40x24", TargetProfileId::AppleIIe,
+                          {280, 192, {8, 7}}, {PaletteModel::FixedRevisionDependent, 16, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::AppleIIeLores, mustId<ModeId>("apple-iie-lores"),
+                          "Apple IIe Lo-Res (40x48)", TargetProfileId::AppleIIe,
+                          {40, 48, {4, 3}}, {PaletteModel::FixedRevisionDependent, 16, 16, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::AppleIIeHires, mustId<ModeId>("apple-iie-hires"),
+                          "Apple IIe Hi-Res (280x192)", TargetProfileId::AppleIIe,
+                          {280, 192, {8, 7}}, {PaletteModel::FixedRevisionDependent, 6, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::AppleIIeDoubleHires, mustId<ModeId>("apple-iie-double-hires"),
+                          "Apple IIe Double Hi-Res (560x192)", TargetProfileId::AppleIIe,
+                          {560, 192, {4, 7}}, {PaletteModel::FixedRevisionDependent, 16, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::Zx81Text32x24, mustId<ModeId>("zx81-text-32x24"),
+                          "ZX81 Text 32x24", TargetProfileId::TimexTs1000,
+                          {256, 192, {1, 1}}, {PaletteModel::Fixed, 2, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::Zx81Semigraphics64x48, mustId<ModeId>("zx81-semigraphics-64x48"),
+                          "ZX81 Semigraphics 64x48", TargetProfileId::TimexTs1000,
+                          {64, 48, {1, 1}}, {PaletteModel::Fixed, 2, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::Trs80Text64x16, mustId<ModeId>("trs80-text-64x16"),
+                          "TRS-80 Text 64x16", TargetProfileId::Trs80Model1_3,
+                          {512, 192, {3, 2}}, {PaletteModel::Fixed, 2, 2, 0}, ModeOption::None},
+    DisplayModeDescriptor{ConversionMode::Trs80Semigraphics128x48, mustId<ModeId>("trs80-semigraphics-128x48"),
+                          "TRS-80 Semigraphics 128x48", TargetProfileId::Trs80Model1_3,
+                          {128, 48, {1, 1}}, {PaletteModel::Fixed, 2, 2, 0}, ModeOption::None},
 };
 
 const std::array profiles{
@@ -456,6 +560,67 @@ const std::array profiles{
                       | TargetCapability::HorizontalScroll,
                   {8, 8, 1024, 1, 32, 32},
                   {8, 64, 128, 128, 4, false, true}, superNesModes},
+    TargetProfile{TargetProfileId::AtariLynx,
+                  mustId<TargetId>("atari-lynx"),
+                  "Atari Lynx Suzy / Mikey",
+                  TargetKind::ObjectProcessor, TargetProfileStatus::Implemented,
+                  64U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::Sprites | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor | TargetCapability::ObjectLists
+                      | TargetCapability::ObjectScaling,
+                  {8, 8, 1, 1, 20, 13},
+                  {8, 64, 128, 128, 4, false, true}, atariLynxModes},
+    TargetProfile{TargetProfileId::NeoGeo,
+                  mustId<TargetId>("neo-geo"),
+                  "SNK Neo Geo",
+                  TargetKind::ObjectProcessor, TargetProfileStatus::Implemented,
+                  68U * 1024U,
+                  TargetCapability::ProgrammablePalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::Sprites
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor | TargetCapability::ObjectLists
+                      | TargetCapability::ObjectScaling
+                      | TargetCapability::ObjectChaining,
+                  {8, 8, 4096, 1, 40, 32},
+                  {16, 512, 128, 381, 4, false, true}, neoGeoModes},
+    TargetProfile{TargetProfileId::AmstradCpc, mustId<TargetId>("amstrad-cpc"),
+                  "Amstrad CPC", TargetKind::DisplayAdapter, TargetProfileStatus::Implemented,
+                  16U * 1024U, TargetCapability::FixedPalette
+                      | TargetCapability::CharacterPatterns | TargetCapability::TileMaps
+                      | TargetCapability::BitmapConversion | TargetCapability::EnhancedColor,
+                  {8, 8, 256, 1, 40, 25}, {}, amstradCpcModes},
+    TargetProfile{TargetProfileId::IbmCga, mustId<TargetId>("ibm-cga"),
+                  "IBM Color/Graphics Adapter", TargetKind::DisplayAdapter,
+                  TargetProfileStatus::Implemented, 16U * 1024U,
+                  TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion,
+                  {8, 8, 256, 1, 80, 25}, {}, ibmCgaModes},
+    TargetProfile{TargetProfileId::IbmEga, mustId<TargetId>("ibm-ega"),
+                  "IBM Enhanced Graphics Adapter", TargetKind::DisplayAdapter,
+                  TargetProfileStatus::Implemented, 256U * 1024U,
+                  TargetCapability::ProgrammablePalette | TargetCapability::CharacterPatterns
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion
+                      | TargetCapability::EnhancedColor,
+                  {8, 8, 256, 1, 80, 25}, {}, ibmEgaModes},
+    TargetProfile{TargetProfileId::AppleIIe, mustId<TargetId>("apple-iie"),
+                  "Apple IIe Video", TargetKind::DisplayAdapter,
+                  TargetProfileStatus::Implemented, 16U * 1024U,
+                  TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion,
+                  {7, 8, 128, 1, 40, 24}, {}, appleIIeModes},
+    TargetProfile{TargetProfileId::TimexTs1000, mustId<TargetId>("timex-ts1000"),
+                  "Timex Sinclair 1000 / ZX81-class", TargetKind::CharacterDisplayHardware,
+                  TargetProfileStatus::Implemented, 1024U,
+                  TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion,
+                  {8, 8, 64, 1, 32, 24}, {}, timexTs1000Modes},
+    TargetProfile{TargetProfileId::Trs80Model1_3, mustId<TargetId>("trs80-model1-3"),
+                  "TRS-80 Model I / III", TargetKind::CharacterDisplayHardware,
+                  TargetProfileStatus::Implemented, 1024U,
+                  TargetCapability::FixedPalette | TargetCapability::CharacterPatterns
+                      | TargetCapability::TileMaps | TargetCapability::BitmapConversion,
+                  {8, 8, 128, 1, 64, 16}, {}, trs80Modes},
 };
 
 } // namespace
@@ -636,6 +801,16 @@ ConversionMode defaultConversionMode(TargetProfileId profile)
         return ConversionMode::GameBoyColorBackground;
     if (profile == TargetProfileId::SuperNes)
         return ConversionMode::SuperNesMode1Background;
+    if (profile == TargetProfileId::AtariLynx)
+        return ConversionMode::AtariLynxObjectScene;
+    if (profile == TargetProfileId::NeoGeo)
+        return ConversionMode::NeoGeoChainedSprites;
+    if (profile == TargetProfileId::AmstradCpc) return ConversionMode::CpcMode1;
+    if (profile == TargetProfileId::IbmCga) return ConversionMode::CgaGraphics320x200;
+    if (profile == TargetProfileId::IbmEga) return ConversionMode::EgaGraphics320x200;
+    if (profile == TargetProfileId::AppleIIe) return ConversionMode::AppleIIeHires;
+    if (profile == TargetProfileId::TimexTs1000) return ConversionMode::Zx81Semigraphics64x48;
+    if (profile == TargetProfileId::Trs80Model1_3) return ConversionMode::Trs80Semigraphics128x48;
     return supported.front();
 }
 

@@ -110,12 +110,13 @@ share codecs and compatibility analysis without sharing one ambiguous profile.
 
 | Target | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| Atari Lynx Suzy/Mikey graphics system | atari-lynx | Object processor | Planned | Palette-constrained sprite objects, line data encoding, Sprite Control Block generation, framebuffer preview |
-| SNK Neo Geo video hardware | neo-geo | Object processor | Research | 16-pixel-wide sprite strips, FIX-layer characters, palette assignments, chaining and attribute data |
+| Atari Lynx Suzy/Mikey graphics system | atari-lynx | Object processor | Implemented | Palette-constrained objects, literal line data, linked Sprite Control Blocks, framebuffer preview |
+| SNK Neo Geo video hardware | neo-geo | Object processor | Implemented | 16-pixel-wide object strips, FIX-layer characters, palette assignments, chaining and attribute data |
 
-These targets should not be forced through a background-tile-first interface.
-Their compiler contract begins with object lists and produces the target's
-object metadata and pixel payloads together.
+These targets use an object-first interface. Their compiler contract begins
+with object lists and produces the target's object metadata and pixel payloads
+together. See [OBJECT_PROCESSOR_TARGETS.md](OBJECT_PROCESSOR_TARGETS.md) for the
+implemented conversion, editor, and export contracts.
 
 ### Commodore video controllers
 
@@ -133,12 +134,12 @@ initial support.
 
 | Target environment | Proposed stable ID | Kind | Status | First useful scope |
 | --- | --- | --- | --- | --- |
-| Amstrad CPC video system | amstrad-cpc | Display adapter | Planned | Mode 0/1/2 pixel packing, mode geometry, palette state, screen-memory interleave |
-| IBM Color/Graphics Adapter | ibm-cga | Display adapter | Research | Packed pixels, scanline bank layout, palette/register state, display-aspect preview |
-| IBM Enhanced Graphics Adapter | ibm-ega | Display adapter | Research | Planar framebuffer output, palette/register state, selected canonical graphics modes |
-| Apple IIe video system | apple-iie | Display adapter | Research | High-resolution and double-high-resolution page layouts, artifact-aware preview, raw page export |
-| Timex Sinclair 1000 / ZX81-class display | timex-ts1000 | Character display | Research | Display-file token stream, fixed glyph preview, text and block-graphics conversion |
-| TRS-80 Model I/III display | trs80-model1-3 | Character display | Research | Text and semigraphics byte streams, screen-grid preview, software object composition |
+| Amstrad CPC video system | amstrad-cpc | Display adapter | Implemented | Mode 0/1/2 pixel packing, mode geometry, palette state, screen-memory interleave |
+| IBM Color/Graphics Adapter | ibm-cga | Display adapter | Implemented | Text buffers, packed pixels, scanline bank layout, palette/register state, display-aspect preview |
+| IBM Enhanced Graphics Adapter | ibm-ega | Display adapter | Implemented | Text buffers, planar framebuffer output, palette/register state, 320×200 and 640×350 graphics |
+| Apple IIe video system | apple-iie | Display adapter | Implemented | Text, lo-res, high-resolution and double-high-resolution page layouts and raw page export |
+| Timex Sinclair 1000 / ZX81-class display | timex-ts1000 | Character display | Implemented | HALT-delimited display-file stream, fixed glyph preview, text and block-graphics conversion |
+| TRS-80 Model I/III display | trs80-model1-3 | Character display | Implemented | Text and native 2×3 semigraphics byte streams and screen-grid preview |
 
 The adapter targets receive the same project, source, validation, preview, and
 export experience as VDP targets. Their implementation differs because the

@@ -125,7 +125,7 @@ bool loadRecipe(const QString& path,
 
     settings.mode = static_cast<core::ConversionMode>(std::clamp(
         conversion.value(QStringLiteral("mode")).toInt(0), 0,
-        static_cast<int>(core::ConversionMode::SuperNesMode3Background)));
+        static_cast<int>(core::ConversionMode::Trs80Semigraphics128x48)));
     const auto savedTarget = core::targetProfileId(
         conversion.value(QStringLiteral("targetProfile")).toString().toStdString());
     settings.targetProfile = core::effectiveTargetProfile(
@@ -440,12 +440,12 @@ int main(int argc, char* argv[])
         QStringLiteral("Destination directory."), QStringLiteral("directory"));
     const QCommandLineOption modeOption(
         {QStringLiteral("m"), QStringLiteral("mode")},
-        QStringLiteral("Conversion mode: registered TMS9918A/F18A and Yamaha SCREEN modes; mode-4-sms-192, mode-4-sms-224, mode-4-sms-240-pal; or mode-5-genesis-h32, mode-5-genesis-h40, mode-5-genesis-h32-pal, and mode-5-genesis-h40-pal."),
+        QStringLiteral("Registered display mode (for example mode-4-sms-240-pal, mode-5-genesis-h40, atari-lynx-object-scene, neo-geo-fix-layer, or neo-geo-chained-sprites)."),
         QStringLiteral("name"),
         QStringLiteral("bitmap-9918a"));
     const QCommandLineOption targetOption(
         {QStringLiteral("t"), QStringLiteral("target")},
-        QStringLiteral("Target VDP profile: tms9918a, f18a, v9938, v9958, sega-sms-vdp, or sega-genesis-vdp."),
+        QStringLiteral("Registered target profile (for example sega-sms-vdp, sega-genesis-vdp, atari-lynx, or neo-geo)."),
         QStringLiteral("name"));
     const QCommandLineOption presetOption(
         {QStringLiteral("p"), QStringLiteral("preset")},
@@ -921,14 +921,14 @@ int main(int argc, char* argv[])
         if (!target) {
             return reportFailure(wantsJson, ExitCode::Usage,
                                  QStringLiteral("unknown-target"),
-                                 QStringLiteral("Unknown target VDP: %1")
+                                 QStringLiteral("Unknown target: %1")
                                      .arg(requestedTarget));
         }
         if (!core::supportsConversionMode(*target, settings.mode)) {
             return reportFailure(
                 wantsJson, ExitCode::Usage,
                 QStringLiteral("unsupported-target-mode"),
-                QStringLiteral("The selected target VDP does not support this conversion mode."));
+                QStringLiteral("The selected target does not support this conversion mode."));
         }
         settings.targetProfile = *target;
     } else {

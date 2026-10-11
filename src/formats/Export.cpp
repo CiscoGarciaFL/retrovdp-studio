@@ -15,6 +15,7 @@ namespace {
 using core::ConversionMode;
 using core::TargetMemoryImage;
 using core::TargetMemoryTable;
+using core::TargetProfileId;
 using core::TargetTableRole;
 
 constexpr std::size_t graphicsTableSize = 6144U;
@@ -125,6 +126,19 @@ bool isNintendoPpuMode(ConversionMode mode)
         || mode == ConversionMode::SuperNesMode0Background
         || mode == ConversionMode::SuperNesMode1Background
         || mode == ConversionMode::SuperNesMode3Background;
+}
+
+bool isObjectProcessorMode(ConversionMode mode)
+{
+    return mode == ConversionMode::AtariLynxObjectScene
+        || mode == ConversionMode::NeoGeoFixLayer
+        || mode == ConversionMode::NeoGeoChainedSprites;
+}
+
+bool isLegacyDisplayMode(ConversionMode mode)
+{
+    return mode >= ConversionMode::CpcMode0
+        && mode <= ConversionMode::Trs80Semigraphics128x48;
 }
 
 const TargetMemoryTable* table(const TargetMemoryImage& image, TargetTableRole role)
@@ -319,6 +333,38 @@ GeneratedFileManifest tableFiles(const ExportRequest& request)
                            ? ".CGRAM" : ".PAL");
             else if (source.role == TargetTableRole::DisplayRegisters)
                 fileName = upperBase + ".REG";
+        } else if (request.format == ExportFormat::Raw
+                   && isObjectProcessorMode(request.target->mode)) {
+            if (source.role == TargetTableRole::Pattern) {
+                fileName = upperBase
+                    + (request.target->mode == ConversionMode::NeoGeoFixLayer
+                           ? ".FIX" : ".SPR");
+            } else if (source.role == TargetTableRole::TileMap) {
+                fileName = upperBase + ".FIXMAP";
+            } else if (source.role == TargetTableRole::ObjectAttributes) {
+                fileName = upperBase
+                    + (request.target->mode == ConversionMode::AtariLynxObjectScene
+                           ? ".SCB" : ".VRAM");
+            } else if (source.role == TargetTableRole::Palette) {
+                fileName = upperBase + ".PAL";
+            } else if (source.role == TargetTableRole::DisplayRegisters) {
+                fileName = upperBase + ".REG";
+            }
+        } else if (request.format == ExportFormat::Raw
+                   && isLegacyDisplayMode(request.target->mode)) {
+            if (source.role == TargetTableRole::Framebuffer) {
+                if (request.target->profile == TargetProfileId::TimexTs1000)
+                    fileName = upperBase + ".DFILE";
+                else if (request.target->profile == TargetProfileId::Trs80Model1_3)
+                    fileName = upperBase + ".VRAM";
+                else if (request.target->profile == TargetProfileId::AppleIIe)
+                    fileName = upperBase + ".PAGE";
+                else fileName = upperBase + ".VRAM";
+            } else if (source.role == TargetTableRole::Palette) {
+                fileName = upperBase + ".PAL";
+            } else if (source.role == TargetTableRole::DisplayRegisters) {
+                fileName = upperBase + ".REG";
+            }
         }
         GeneratedFile file{std::move(fileName), {}};
         rawTotal += source.bytes.size();

@@ -4,8 +4,10 @@
 #include "retrovdp/core/CommodoreVdpConverter.hpp"
 #include "retrovdp/core/F18AConverter.hpp"
 #include "retrovdp/core/HuC6270Converter.hpp"
+#include "retrovdp/core/LegacyDisplayConverter.hpp"
 #include "retrovdp/core/Multicolor9918Converter.hpp"
 #include "retrovdp/core/NintendoPpuConverter.hpp"
+#include "retrovdp/core/ObjectProcessorConverter.hpp"
 #include "retrovdp/core/PaletteSelection.hpp"
 #include "retrovdp/core/SegaSmsVdpConverter.hpp"
 #include "retrovdp/core/SegaGenesisVdpConverter.hpp"
@@ -44,6 +46,33 @@ ConversionResult compileRegisteredConversion(const RgbImage& source,
 
     ConversionResult result;
     switch (settings.mode) {
+    case ConversionMode::CpcMode0:
+    case ConversionMode::CpcMode1:
+    case ConversionMode::CpcMode2:
+    case ConversionMode::CgaText40x25:
+    case ConversionMode::CgaText80x25:
+    case ConversionMode::CgaGraphics320x200:
+    case ConversionMode::CgaGraphics640x200:
+    case ConversionMode::EgaText:
+    case ConversionMode::EgaGraphics320x200:
+    case ConversionMode::EgaGraphics640x350:
+    case ConversionMode::AppleIIeText:
+    case ConversionMode::AppleIIeLores:
+    case ConversionMode::AppleIIeHires:
+    case ConversionMode::AppleIIeDoubleHires:
+    case ConversionMode::Zx81Text32x24:
+    case ConversionMode::Zx81Semigraphics64x48:
+    case ConversionMode::Trs80Text64x16:
+    case ConversionMode::Trs80Semigraphics128x48:
+        result = convertLegacyDisplay(source, settings, cancellation,
+                                      std::move(progress));
+        break;
+    case ConversionMode::AtariLynxObjectScene:
+    case ConversionMode::NeoGeoFixLayer:
+    case ConversionMode::NeoGeoChainedSprites:
+        result = convertObjectProcessor(source, settings, cancellation,
+                                        std::move(progress));
+        break;
     case ConversionMode::GameBoyBackground:
     case ConversionMode::GameBoyColorBackground:
     case ConversionMode::SuperNesMode0Background:

@@ -9,6 +9,8 @@ add_library(retrovdp_app_support STATIC
     ConversionRecipe.hpp
     EditorProjectController.cpp
     EditorProjectControllerNintendo.cpp
+    EditorProjectControllerObject.cpp
+    EditorProjectControllerLegacyDisplay.cpp
     EditorProjectControllerSprite.cpp
     EditorProjectController.hpp
     ImageInputController.cpp

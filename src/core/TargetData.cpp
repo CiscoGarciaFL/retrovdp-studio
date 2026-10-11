@@ -159,6 +159,79 @@ constexpr std::array superNesMode3BackgroundTables{
     TargetTableLayout{TargetTableRole::Palette, 512U},
     TargetTableLayout{TargetTableRole::DisplayRegisters, 64U},
 };
+constexpr std::array atariLynxObjectSceneTables{
+    TargetTableLayout{TargetTableRole::Pattern, 8263U},
+    TargetTableLayout{TargetTableRole::ObjectAttributes, 23U},
+    TargetTableLayout{TargetTableRole::Palette, 32U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array neoGeoFixLayerTables{
+    TargetTableLayout{TargetTableRole::Pattern, 128U * 1024U},
+    TargetTableLayout{TargetTableRole::TileMap, 8192U},
+    TargetTableLayout{TargetTableRole::Palette, 8192U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array neoGeoChainedSpriteTables{
+    TargetTableLayout{TargetTableRole::Pattern, 20U * 14U * 128U},
+    TargetTableLayout{TargetTableRole::ObjectAttributes, 0x8600U * 2U},
+    TargetTableLayout{TargetTableRole::Palette, 8192U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array cpcTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 16384U},
+    TargetTableLayout{TargetTableRole::Palette, 17U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array cgaText40Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 2000U},
+    TargetTableLayout{TargetTableRole::Palette, 1U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array cgaText80Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 4000U},
+    TargetTableLayout{TargetTableRole::Palette, 1U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array cgaGraphicsTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 16384U},
+    TargetTableLayout{TargetTableRole::Palette, 1U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array egaTextTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 4000U},
+    TargetTableLayout{TargetTableRole::Palette, 16U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array ega320Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 32000U},
+    TargetTableLayout{TargetTableRole::Palette, 16U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array ega640Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 112000U},
+    TargetTableLayout{TargetTableRole::Palette, 16U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array appleTextLoresTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 1024U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array appleHiresTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 8192U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array appleDoubleHiresTables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 16384U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array zx81Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 793U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
+constexpr std::array trs80Tables{
+    TargetTableLayout{TargetTableRole::Framebuffer, 1024U},
+    TargetTableLayout{TargetTableRole::DisplayRegisters, 16U},
+};
 
 void setPaletteError(PaletteError* destination, PaletteError error)
 {
@@ -283,6 +356,27 @@ std::span<const TargetTableLayout> expectedTargetTables(ConversionMode mode)
     case ConversionMode::SuperNesMode0Background: return superNesMode0BackgroundTables;
     case ConversionMode::SuperNesMode1Background: return superNesMode1BackgroundTables;
     case ConversionMode::SuperNesMode3Background: return superNesMode3BackgroundTables;
+    case ConversionMode::AtariLynxObjectScene: return atariLynxObjectSceneTables;
+    case ConversionMode::NeoGeoFixLayer: return neoGeoFixLayerTables;
+    case ConversionMode::NeoGeoChainedSprites: return neoGeoChainedSpriteTables;
+    case ConversionMode::CpcMode0:
+    case ConversionMode::CpcMode1:
+    case ConversionMode::CpcMode2: return cpcTables;
+    case ConversionMode::CgaText40x25: return cgaText40Tables;
+    case ConversionMode::CgaText80x25: return cgaText80Tables;
+    case ConversionMode::CgaGraphics320x200:
+    case ConversionMode::CgaGraphics640x200: return cgaGraphicsTables;
+    case ConversionMode::EgaText: return egaTextTables;
+    case ConversionMode::EgaGraphics320x200: return ega320Tables;
+    case ConversionMode::EgaGraphics640x350: return ega640Tables;
+    case ConversionMode::AppleIIeText:
+    case ConversionMode::AppleIIeLores: return appleTextLoresTables;
+    case ConversionMode::AppleIIeHires: return appleHiresTables;
+    case ConversionMode::AppleIIeDoubleHires: return appleDoubleHiresTables;
+    case ConversionMode::Zx81Text32x24:
+    case ConversionMode::Zx81Semigraphics64x48: return zx81Tables;
+    case ConversionMode::Trs80Text64x16:
+    case ConversionMode::Trs80Semigraphics128x48: return trs80Tables;
     }
     return {};
 }

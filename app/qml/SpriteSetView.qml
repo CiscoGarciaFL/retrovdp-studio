@@ -26,6 +26,8 @@ Item {
         editorProject.activeTargetInfo.id === "sega-genesis-vdp"
         || editorProject.activeTargetInfo.id === "huc6270"
         || editorProject.activeTargetInfo.id === "vic-ii"
+        || editorProject.activeTargetInfo.id === "atari-lynx"
+        || editorProject.activeTargetInfo.id === "neo-geo"
     property bool sprite8Expanded:
         editorProject.activeTargetInfo.spritePerItemSize
         || editorProject.spriteGlobalSize === 8
@@ -284,7 +286,11 @@ Item {
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("%1 sprite entries · %2")
+                text: editorProject.activeTargetInfo.objectProcessor
+                      ? qsTr("%1 object entries · %2")
+                            .arg(editorProject.activeTargetInfo.name)
+                            .arg(editorProject.spritePatternsPerSet)
+                      : qsTr("%1 sprite entries · %2")
                       .arg(editorProject.activeTargetInfo.name)
                       .arg(editorProject.spritePatternsPerSet)
                 color: "white"
@@ -295,7 +301,9 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Each entry keeps its own size")
+                text: editorProject.activeTargetInfo.objectProcessor
+                      ? qsTr("Each object keeps its own dimensions and attributes")
+                      : qsTr("Each entry keeps its own size")
                 color: "#d9efff"
                 font.pixelSize: 10
             }
@@ -339,7 +347,10 @@ Item {
                 border.color: active ? "#8fd0ff" : "#53606d"
                 radius: 3
                 Accessible.role: Accessible.Button
-                Accessible.name: qsTr("Sprite %1, %2 by %3 pixels")
+                Accessible.name: editorProject.activeTargetInfo.objectProcessor
+                                 ? qsTr("Object %1, %2 by %3 pixels")
+                                       .arg(index).arg(pixelWidth).arg(pixelHeight)
+                                 : qsTr("Sprite %1, %2 by %3 pixels")
                                  .arg(index).arg(pixelWidth).arg(pixelHeight)
 
                 Canvas {

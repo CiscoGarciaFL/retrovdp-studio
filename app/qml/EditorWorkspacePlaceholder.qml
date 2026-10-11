@@ -101,7 +101,9 @@ PreviewPane {
                    .arg(editorProject.characterSetCount)
                    .arg(editorProject.activeCharacterPattern + 1)
                    .arg(editorProject.characterPatternsPerSet)
-             : qsTr("Sprite set %1 of %2 · Sprite %3 of %4")
+             : (editorProject.activeTargetInfo.objectProcessor
+                ? qsTr("Object set %1 of %2 · Object %3 of %4")
+                : qsTr("Sprite set %1 of %2 · Sprite %3 of %4"))
                    .arg(editorProject.activeSpriteSet + 1)
                    .arg(editorProject.spriteSetNames.length)
                    .arg(editorProject.activeSprite + 1)
@@ -254,11 +256,15 @@ PreviewPane {
                 enabled: root.editorKind === 0 && imageInput.hasConversion
                 Accessible.name: root.editorKind === 0
                                  ? qsTr("Extract patterns from Screen Image")
-                                 : qsTr("Import sprites from Screen Image")
+                                 : (editorProject.activeTargetInfo.objectProcessor
+                                    ? qsTr("Import objects from Object Scene")
+                                    : qsTr("Import sprites from Screen Image"))
                 ToolTip.visible: hovered
                 ToolTip.text: root.editorKind === 0
                               ? Accessible.name
-                              : qsTr("Sprite extraction is not implemented yet")
+                               : (editorProject.activeTargetInfo.objectProcessor
+                                  ? qsTr("Edit objects directly, then export the native object list")
+                                  : qsTr("Sprite extraction is not implemented yet"))
                 onClicked: {
                     if (root.editorKind === 0)
                         characterExtractionDialog.openForScreenImage()
@@ -931,10 +937,14 @@ PreviewPane {
                     checked
                     ? (root.editorKind === 0
                        ? qsTr("Change to Pattern Editor")
-                       : qsTr("Change to Sprite Editor"))
+                        : (editorProject.activeTargetInfo.objectProcessor
+                           ? qsTr("Change to Object Editor")
+                           : qsTr("Change to Sprite Editor")))
                     : (root.editorKind === 0
                        ? qsTr("Change to Tiling Screen")
-                       : qsTr("Change to Sprite Placement"))
+                        : (editorProject.activeTargetInfo.objectProcessor
+                           ? qsTr("Change to Object Scene")
+                           : qsTr("Change to Sprite Placement")))
                 Accessible.name: modeHint
                 ToolTip.visible: hovered
                 ToolTip.text: modeHint

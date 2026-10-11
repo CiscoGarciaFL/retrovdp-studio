@@ -30,6 +30,14 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(bool gameBoyEnabled READ gameBoyEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool gameBoyColorEnabled READ gameBoyColorEnabled NOTIFY projectChanged)
     Q_PROPERTY(bool superNesEnabled READ superNesEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool atariLynxEnabled READ atariLynxEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool neoGeoEnabled READ neoGeoEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool amstradCpcEnabled READ amstradCpcEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool ibmCgaEnabled READ ibmCgaEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool ibmEgaEnabled READ ibmEgaEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool appleIIeEnabled READ appleIIeEnabled NOTIFY projectChanged)
+    Q_PROPERTY(bool timexTs1000Enabled READ timexTs1000Enabled NOTIFY projectChanged)
+    Q_PROPERTY(bool trs80Enabled READ trs80Enabled NOTIFY projectChanged)
     Q_PROPERTY(QStringList plannedTargetIds READ plannedTargetIds NOTIFY projectChanged)
     Q_PROPERTY(int activeTarget READ activeTarget WRITE setActiveTarget NOTIFY projectChanged)
     Q_PROPERTY(QVariantList supportedTargets READ supportedTargets NOTIFY projectChanged)
@@ -78,6 +86,11 @@ class EditorProjectController final : public QObject {
     Q_PROPERTY(int spriteDrawingColorIndex READ spriteDrawingColorIndex WRITE setSpriteDrawingColorIndex NOTIFY projectChanged)
     Q_PROPERTY(int activeSpritePaletteBank READ activeSpritePaletteBank WRITE setActiveSpritePaletteBank NOTIFY projectChanged)
     Q_PROPERTY(bool activeSpritePriority READ activeSpritePriority WRITE setActiveSpritePriority NOTIFY projectChanged)
+    Q_PROPERTY(int activeObjectHorizontalScale READ activeObjectHorizontalScale WRITE setActiveObjectHorizontalScale NOTIFY projectChanged)
+    Q_PROPERTY(int activeObjectVerticalScale READ activeObjectVerticalScale WRITE setActiveObjectVerticalScale NOTIFY projectChanged)
+    Q_PROPERTY(bool activeObjectChained READ activeObjectChained WRITE setActiveObjectChained NOTIFY projectChanged)
+    Q_PROPERTY(bool activeObjectFlipX READ activeObjectFlipX WRITE setActiveObjectFlipX NOTIFY projectChanged)
+    Q_PROPERTY(bool activeObjectFlipY READ activeObjectFlipY WRITE setActiveObjectFlipY NOTIFY projectChanged)
     Q_PROPERTY(int activeSpriteColorDepth READ activeSpriteColorDepth WRITE setActiveSpriteColorDepth NOTIFY projectChanged)
     Q_PROPERTY(int spriteRevision READ spriteRevision NOTIFY projectChanged)
     Q_PROPERTY(QVariantList spriteSetNames READ spriteSetNames NOTIFY projectChanged)
@@ -117,6 +130,14 @@ public:
     [[nodiscard]] bool gameBoyEnabled() const { return gameBoyEnabled_; }
     [[nodiscard]] bool gameBoyColorEnabled() const { return gameBoyColorEnabled_; }
     [[nodiscard]] bool superNesEnabled() const { return superNesEnabled_; }
+    [[nodiscard]] bool atariLynxEnabled() const { return atariLynxEnabled_; }
+    [[nodiscard]] bool neoGeoEnabled() const { return neoGeoEnabled_; }
+    [[nodiscard]] bool amstradCpcEnabled() const { return amstradCpcEnabled_; }
+    [[nodiscard]] bool ibmCgaEnabled() const { return ibmCgaEnabled_; }
+    [[nodiscard]] bool ibmEgaEnabled() const { return ibmEgaEnabled_; }
+    [[nodiscard]] bool appleIIeEnabled() const { return appleIIeEnabled_; }
+    [[nodiscard]] bool timexTs1000Enabled() const { return timexTs1000Enabled_; }
+    [[nodiscard]] bool trs80Enabled() const { return trs80Enabled_; }
     [[nodiscard]] QStringList plannedTargetIds() const { return plannedTargetIds_; }
     [[nodiscard]] int activeTarget() const;
     [[nodiscard]] QVariantList supportedTargets() const;
@@ -172,6 +193,11 @@ public:
     [[nodiscard]] int spriteDrawingColorIndex() const { return spriteDrawingColorIndex_; }
     [[nodiscard]] int activeSpritePaletteBank() const;
     [[nodiscard]] bool activeSpritePriority() const;
+    [[nodiscard]] int activeObjectHorizontalScale() const;
+    [[nodiscard]] int activeObjectVerticalScale() const;
+    [[nodiscard]] bool activeObjectChained() const;
+    [[nodiscard]] bool activeObjectFlipX() const;
+    [[nodiscard]] bool activeObjectFlipY() const;
     [[nodiscard]] int activeSpriteColorDepth() const;
     [[nodiscard]] int spriteRevision() const { return spriteRevision_; }
     [[nodiscard]] QVariantList spriteSetNames() const;
@@ -225,6 +251,11 @@ public:
     void setSpriteDrawingColorIndex(int value);
     void setActiveSpritePaletteBank(int value);
     void setActiveSpritePriority(bool value);
+    void setActiveObjectHorizontalScale(int value);
+    void setActiveObjectVerticalScale(int value);
+    void setActiveObjectChained(bool value);
+    void setActiveObjectFlipX(bool value);
+    void setActiveObjectFlipY(bool value);
     void setActiveSpriteColorDepth(int value);
     void setActiveSpriteEditor(int value);
     void setSpritePlacementMode(bool value);
@@ -330,6 +361,8 @@ public:
     Q_INVOKABLE bool loadRecipe(const QUrl& fileUrl);
     Q_INVOKABLE bool exportGenesisCharacterAssets(const QUrl& directoryUrl);
     Q_INVOKABLE bool exportNintendoEditorAssets(const QUrl& directoryUrl);
+    Q_INVOKABLE bool exportObjectProcessorEditorAssets(const QUrl& directoryUrl);
+    Q_INVOKABLE bool exportLegacyDisplayEditorAssets(const QUrl& directoryUrl);
     Q_INVOKABLE void clearStatus();
 
 signals:
@@ -345,7 +378,7 @@ private:
     };
     struct CharacterSet {
         QString name;
-        std::array<CharacterPattern, 2048> patterns;
+        std::array<CharacterPattern, 4096> patterns;
     };
     struct CharacterEditorSlot {
         bool loaded{};
@@ -381,10 +414,13 @@ private:
         bool flipX{};
         bool flipY{};
         bool priority{};
+        int horizontalScale{100};
+        int verticalScale{100};
+        bool chained{};
     };
     struct SpritePattern {
-        std::vector<std::uint8_t> baselinePixels = std::vector<std::uint8_t>(4096);
-        std::vector<std::uint8_t> f18aPixels = std::vector<std::uint8_t>(4096);
+        std::vector<std::uint8_t> baselinePixels = std::vector<std::uint8_t>(8192);
+        std::vector<std::uint8_t> f18aPixels = std::vector<std::uint8_t>(8192);
         bool f18aOverride{};
     };
     struct SpriteSet {
@@ -413,7 +449,7 @@ private:
         int height{8};
         int colorDepth{1};
         bool enhanced{};
-        std::vector<std::uint8_t> pixels = std::vector<std::uint8_t>(4096);
+        std::vector<std::uint8_t> pixels = std::vector<std::uint8_t>(8192);
     };
 
     [[nodiscard]] CharacterSet makeCharacterSet(int ordinal) const;
@@ -452,6 +488,8 @@ private:
     [[nodiscard]] bool usesGameBoyEditor() const;
     [[nodiscard]] bool usesGameBoyColorEditor() const;
     [[nodiscard]] bool usesSuperNesEditor() const;
+    [[nodiscard]] bool usesAtariLynxEditor() const;
+    [[nodiscard]] bool usesNeoGeoEditor() const;
     [[nodiscard]] bool usesCompoundSpriteEditor() const;
     [[nodiscard]] bool usesIndexed4BppEditor() const;
     [[nodiscard]] bool usesIndexedSpriteEditor() const;
@@ -479,6 +517,14 @@ private:
     bool gameBoyEnabled_{};
     bool gameBoyColorEnabled_{};
     bool superNesEnabled_{};
+    bool atariLynxEnabled_{};
+    bool neoGeoEnabled_{};
+    bool amstradCpcEnabled_{};
+    bool ibmCgaEnabled_{};
+    bool ibmEgaEnabled_{};
+    bool appleIIeEnabled_{};
+    bool timexTs1000Enabled_{};
+    bool trs80Enabled_{};
     QStringList plannedTargetIds_;
     int previewTarget_{};
     int editScope_{};

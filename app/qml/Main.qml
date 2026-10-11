@@ -307,11 +307,21 @@ ApplicationWindow {
     FolderDialog {
         id: genesisCharacterExportDialog
         objectName: "genesisCharacterExportDialog"
-        title: editorProject.activeTargetInfo.id === "sega-genesis-vdp"
+        title: editorProject.activeTargetInfo.objectProcessor
+               ? qsTr("Export native object-processor assets")
+               : (editorProject.activeTargetInfo.displayAdapter
+                  || editorProject.activeTargetInfo.characterDisplayHardware)
+               ? qsTr("Export native display assets")
+               : editorProject.activeTargetInfo.id === "sega-genesis-vdp"
                ? qsTr("Export native Genesis character assets")
                : qsTr("Export native Nintendo PPU assets")
         onAccepted: {
-            if (editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+            if (editorProject.activeTargetInfo.objectProcessor)
+                editorProject.exportObjectProcessorEditorAssets(selectedFolder)
+            else if (editorProject.activeTargetInfo.displayAdapter
+                     || editorProject.activeTargetInfo.characterDisplayHardware)
+                editorProject.exportLegacyDisplayEditorAssets(selectedFolder)
+            else if (editorProject.activeTargetInfo.id === "sega-genesis-vdp")
                 editorProject.exportGenesisCharacterAssets(selectedFolder)
             else
                 editorProject.exportNintendoEditorAssets(selectedFolder)
@@ -331,8 +341,13 @@ ApplicationWindow {
         text: qsTr("&Export…")
         shortcut: "Ctrl+E"
         enabled: (window.workspaceMode === 0 && imageInput.hasConversion)
-                 || (window.workspaceMode === 1
-                     && editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+                  || (window.workspaceMode === 1
+                      && editorProject.activeTargetInfo.id === "sega-genesis-vdp")
+                  || ((window.workspaceMode === 1 || window.workspaceMode === 2)
+                      && editorProject.activeTargetInfo.objectProcessor)
+                  || (window.workspaceMode === 1
+                      && (editorProject.activeTargetInfo.displayAdapter
+                          || editorProject.activeTargetInfo.characterDisplayHardware))
                  || ((window.workspaceMode === 1 || window.workspaceMode === 2)
                      && (editorProject.activeTargetInfo.id === "game-boy-ppu"
                          || editorProject.activeTargetInfo.id === "game-boy-color-ppu"
@@ -529,7 +544,8 @@ ApplicationWindow {
 
             MenuItem {
                 objectName: "screenImageModeMenuItem"
-                text: qsTr("&Screen Image")
+                text: editorProject.activeTargetInfo.objectProcessor
+                      ? qsTr("&Object Scene") : qsTr("&Screen Image")
                 enabled: editorProject.screenImageModeAvailable
                 checkable: true
                 checked: window.workspaceMode === 0
@@ -545,7 +561,8 @@ ApplicationWindow {
             }
             MenuItem {
                 objectName: "spriteEditorModeMenuItem"
-                text: qsTr("S&prite Editor")
+                text: editorProject.activeTargetInfo.objectProcessor
+                      ? qsTr("&Object Editor") : qsTr("S&prite Editor")
                 enabled: editorProject.spriteModeAvailable
                 checkable: true
                 checked: window.workspaceMode === 2
